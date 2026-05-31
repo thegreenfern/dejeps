@@ -578,6 +578,25 @@ class InstructorController extends Controller
         return $baseline;
     }
 
+    public function saveTheoSitOverride(Request $request, Trainee $trainee)
+    {
+        $level = $request->input('level');
+        $sit   = $request->input('situation');
+
+        $validSits = ['observation', 'supervision_directe', 'supervision_indirecte', 'autonomie'];
+
+        if (!in_array($level, TraineePedaTheoStatus::LEVELS) || !in_array($sit, $validSits)) {
+            abort(422);
+        }
+
+        $uc3 = TraineeUc3::firstOrCreate(['trainee_id' => $trainee->id]);
+        $overrides = $uc3->theo_sit_overrides ?? [];
+        $overrides[$level] = $sit;
+        $uc3->update(['theo_sit_overrides' => $overrides]);
+
+        return back();
+    }
+
     private function buildTheoData(Trainee $trainee): array
     {
         $uc3           = $trainee->uc3;
@@ -620,6 +639,8 @@ class InstructorController extends Controller
         ];
 
         // Per-level data
+        $theoSits     = ['observation', 'supervision_directe', 'supervision_indirecte', 'autonomie'];
+        $sitOverrides = $uc3?->theo_sit_overrides ?? [];
         $levels = [];
         foreach (TraineePedaTheoStatus::LEVELS as $level) {
             $computedStatus = TraineePedaTheoStatus::computeStatus($topicProgress, $level);
@@ -630,6 +651,23 @@ class InstructorController extends Controller
                 ['status' => $computedStatus]
             );
 
+            // Highest situation achieved across all sessions for this level
+            $sitCounts = array_fill_keys($theoSits, 0);
+            foreach (TraineePedaTheoStatus::LEVEL_TOPICS[$level] ?? [] as $slug) {
+                $sit = $topicProgress[$slug]['situation'] ?? null;
+                if ($sit && isset($sitCounts[$sit])) $sitCounts[$sit]++;
+            }
+            foreach ($topicProgress as $slug => $entry) {
+                if (!str_starts_with($slug, 'autre__')) continue;
+                if (strtolower($entry['session_level'] ?? '') !== strtolower($level)) continue;
+                $sit = $entry['situation'] ?? null;
+                if ($sit && isset($sitCounts[$sit])) $sitCounts[$sit]++;
+            }
+            $sitStatus = 'nt';
+            foreach (array_reverse($theoSits) as $sit) {
+                if ($sitCounts[$sit] > 0) { $sitStatus = $sit; break; }
+            }
+
             // Timeline milestone for this level
             $base     = $baseline[$level] ?? null;
             $dueStr   = $overrides[$level . '_due'] ?? $base['due'] ?? null;
@@ -639,11 +677,12 @@ class InstructorController extends Controller
             $atRisk   = !$achieved && $daysLeft !== null && $daysLeft <= 3;
 
             $levels[$level] = [
-                'label'   => TraineePedaTheoStatus::LEVEL_LABELS[$level],
-                'status'  => $computedStatus,
-                'topics'  => TraineePedaTheoStatus::topicDetails($topicProgress, $level),
-                'autre'   => TraineePedaTheoStatus::autreSeances($topicProgress, $level),
-                'timeline' => $due ? [
+                'label'      => TraineePedaTheoStatus::LEVEL_LABELS[$level],
+                'status'     => $computedStatus,
+                'sit_status' => $sitOverrides[$level] ?? $sitStatus,
+                'topics'     => TraineePedaTheoStatus::topicDetails($topicProgress, $level),
+                'autre'      => TraineePedaTheoStatus::autreSeances($topicProgress, $level),
+                'timeline'   => $due ? [
                     'due'      => $due->format('Y-m-d'),
                     'days_left' => $daysLeft,
                     'achieved' => $achieved,

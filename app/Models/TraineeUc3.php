@@ -8,9 +8,9 @@ class TraineeUc3 extends Model
 {
     protected $table = 'trainee_uc3';
 
-    protected $fillable = ['trainee_id', 'status', 'subject', 'ratings', 'topic_progress', 'trainee_topic_progress', 'session_notes', 'interview_notes', 'peda_timeline_overrides', 'peda_theo_timeline_overrides'];
+    protected $fillable = ['trainee_id', 'status', 'subject', 'ratings', 'topic_progress', 'trainee_topic_progress', 'session_notes', 'interview_notes', 'peda_timeline_overrides', 'peda_theo_timeline_overrides', 'theo_sit_overrides'];
 
-    protected $casts = ['ratings' => 'array', 'topic_progress' => 'array', 'trainee_topic_progress' => 'array', 'peda_timeline_overrides' => 'array', 'peda_theo_timeline_overrides' => 'array'];
+    protected $casts = ['ratings' => 'array', 'topic_progress' => 'array', 'trainee_topic_progress' => 'array', 'peda_timeline_overrides' => 'array', 'peda_theo_timeline_overrides' => 'array', 'theo_sit_overrides' => 'array'];
 
     public static function competencies(): array
     {

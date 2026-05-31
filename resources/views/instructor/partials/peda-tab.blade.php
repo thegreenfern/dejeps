@@ -339,89 +339,59 @@ $daysToTheoExam = Carbon::today()->diffInDays(Carbon::parse($theoExamDate), fals
             <table class="w-full text-xs">
                 <thead>
                     <tr class="border-b border-slate-100">
-                        <th class="text-left py-2.5 px-4 text-slate-400 font-medium w-28">Niveau</th>
+                        <th class="text-left py-2.5 px-4 text-slate-400 font-medium w-14">Niveau</th>
+                        <th class="text-center py-2.5 px-3 text-slate-400 font-medium w-14">Nb de séance</th>
                         <th class="text-center py-2.5 px-4 text-slate-400 font-medium">Statut</th>
-                        <th class="text-center py-2.5 px-4 text-slate-400 font-medium">Sujets</th>
-                        <th class="text-center py-2.5 px-4 text-slate-400 font-medium">Échéance</th>
+                        <th class="text-center py-2.5 px-2 text-slate-400 font-medium w-20">Échéance</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($pedaTheoData['levels'] as $lk => $lv)
                     @php
-                        $tCfg  = $theoCfg[$lv['status']];
-                        $tIdx  = TraineePedaTheoStatus::statusIndex($lv['status']);
                         $totalTopics = count($lv['topics']);
-                        $ratedA   = count(array_filter($lv['topics'], fn($t) => $t['rating'] === '3'));
-                        $ratedAny = count(array_filter($lv['topics'], fn($t) => $t['rating'] !== null));
                         $m = $lv['timeline'];
                     @endphp
                     <tr class="border-b border-slate-50 last:border-0">
                         {{-- Level --}}
-                        <td class="py-2.5 px-4">
+                        <td class="py-2.5 px-4 whitespace-nowrap">
                             <div class="font-semibold text-slate-700">{{ $lv['label'] }}</div>
-                            <div class="text-[10px] text-slate-400 mt-0.5">{{ $totalTopics }} sujet{{ $totalTopics !== 1 ? 's' : '' }}</div>
                         </td>
-                        {{-- Status pill + stepper --}}
-                        <td class="py-2 px-4">
-                            <div class="flex flex-col items-center gap-1.5">
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border {{ $tCfg['pill'] }}">
-                                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color:{{ $tCfg['color'] }}"></span>
-                                    {{ $tCfg['label'] }}
-                                </span>
-                                {{-- 3-step progress dots --}}
-                                <div class="flex items-center gap-0">
-                                    @foreach($theoStatuses as $i => $st)
-                                    @php $filled = $i <= $tIdx; @endphp
-                                    @if($i > 0)
-                                        <div class="h-px w-5" style="background:{{ $filled ? $theoCfg[$st]['color'] : '#e2e8f0' }}"></div>
-                                    @endif
-                                    <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" title="{{ $theoCfg[$st]['label'] }}"
-                                         style="{{ $filled ? 'background-color:'.$theoCfg[$st]['color'] : 'background-color:#fff;border:2px solid #e2e8f0' }}">
-                                    </div>
-                                    @endforeach
-                                </div>
-                            </div>
+                        {{-- Subject count --}}
+                        <td class="py-2.5 px-3 text-center">
+                            <span class="inline-block text-xs font-semibold text-slate-500 bg-slate-100 rounded-full px-2 py-0.5">{{ $totalTopics }}</span>
                         </td>
-                        {{-- Topics list --}}
-                        <td class="py-2 px-4">
+                        {{-- Status: full-width horizontal situation stepper --}}
+                        <td class="py-3 px-6">
                             @php
-                                $workedTopics = array_filter($lv['topics'], fn($t) => $t['rating'] !== null || $t['date'] !== null);
+                                $sitIdx    = array_search($lv['sit_status'], $situations);
+                                if ($sitIdx === false) $sitIdx = -1;
+                                $sitLabels = ['Obs', 'SD', 'SI', 'Auto'];
                             @endphp
-                            <div class="space-y-1">
-                                @forelse($workedTopics as $slug => $topic)
-                                @php
-                                    $r = $topic['rating'];
-                                    $rColor = in_array($r, ['3','A']) ? 'text-emerald-600' : (in_array($r, ['2','ECA']) ? 'text-amber-600' : 'text-slate-400');
-                                    $rBg    = in_array($r, ['3','A']) ? '#d1fae5' : (in_array($r, ['2','ECA']) ? '#fef3c7' : '#f1f5f9');
-                                @endphp
-                                <div class="flex items-center gap-1.5">
-                                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded {{ $rColor }}"
-                                          style="background:{{ $rBg }};min-width:2rem;text-align:center">
-                                        {{ $r ?? '1' }}
-                                    </span>
-                                    <span class="text-[11px] text-slate-600 leading-snug">{{ $topic['label'] }}</span>
-                                </div>
-                                @empty
-                                <span class="text-[11px] text-slate-300 italic">Aucune séance</span>
-                                @endforelse
-                                @if(count($lv['autre']) > 0)
-                                <div class="mt-1 pt-1 border-t border-slate-100">
-                                    @foreach($lv['autre'] as $slug => $autre)
-                                    <div class="flex items-center gap-1.5">
-                                        @php $ar = $autre['rating']; @endphp
-                                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded text-slate-400"
-                                              style="background:#f1f5f9;min-width:2rem;text-align:center">
-                                            {{ $ar ?? '1' }}
-                                        </span>
-                                        <span class="text-[11px] text-slate-400 italic leading-snug">{{ $autre['label'] }}</span>
-                                    </div>
+                            <div style="width:100%;display:flex;flex-direction:column;align-items:stretch">
+                                <div style="display:flex;align-items:center;width:100%">
+                                    @foreach($situations as $i => $sit)
+                                    @php $filled = $i <= $sitIdx; $current = $i === $sitIdx; $sc = $statusCfg[$sit]; @endphp
+                                    @if($i > 0)
+                                        <div style="flex:1;height:2px;border-radius:1px;background:{{ $i <= $sitIdx ? $sc['color'] : '#e2e8f0' }}"></div>
+                                    @endif
+                                    <div role="button"
+                                         onclick="openTheoSitModal('{{ $lk }}', '{{ $lv['label'] }}', '{{ $sit }}', '{{ $sc['label'] }}')"
+                                         title="Définir : {{ $sc['label'] }}"
+                                         style="width:14px;height:14px;border-radius:50%;flex-shrink:0;cursor:pointer;transition:transform .1s;{{ $filled ? 'background-color:'.$sc['color'].($current ? ';box-shadow:0 0 0 3px '.$sc['color'].'33' : '') : 'background-color:#fff;border:2px solid #e2e8f0' }}"
+                                         onmouseenter="this.style.transform='scale(1.3)'" onmouseleave="this.style.transform='scale(1)'"></div>
                                     @endforeach
                                 </div>
-                                @endif
+                                <div style="display:flex;align-items:flex-start;width:100%;margin-top:6px">
+                                    @foreach($situations as $i => $sit)
+                                    @php $active = $i <= $sitIdx; $sc = $statusCfg[$sit]; $last = $i === count($situations) - 1; @endphp
+                                    @if($i > 0)<div style="flex:1"></div>@endif
+                                    <span style="font-size:9px;line-height:1;flex-shrink:0;color:{{ $active ? $sc['color'] : '#cbd5e1' }};font-weight:{{ $active ? '600' : '400' }}">{{ $sitLabels[$i] }}</span>
+                                    @endforeach
+                                </div>
                             </div>
                         </td>
                         {{-- Timeline --}}
-                        <td class="py-2 px-4 text-center">
+                        <td class="py-2 px-2 text-center">
                             @if(!$m)
                                 <span class="text-slate-200 text-xs">—</span>
                             @elseif($m['achieved'])
@@ -510,3 +480,46 @@ $daysToTheoExam = Carbon::today()->diffInDays(Carbon::parse($theoExamDate), fals
         </form>
     </div>
 </div>
+
+{{-- ── Théorique situation override modal ─────────────────────────── --}}
+<div id="theo-sit-modal"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+     style="display:none !important">
+    <div class="bg-white rounded-2xl shadow-xl mx-4 p-6" style="width:100%;max-width:22rem">
+        <h3 class="text-base font-bold text-slate-800 mb-1">Modifier le statut</h3>
+        <p id="theo-sit-modal-text" class="text-sm text-slate-500 mb-6"></p>
+        <form id="theo-sit-form" method="POST" action="{{ route('instructor.uc3.theo.sit.save', $trainee) }}">
+            @csrf
+            <input type="hidden" id="theo-sit-level"     name="level"     value="">
+            <input type="hidden" id="theo-sit-situation" name="situation" value="">
+            <div class="flex gap-3">
+                <button type="button" onclick="closeTheoSitModal()"
+                        class="flex-1 py-2 text-sm text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                    Annuler
+                </button>
+                <button type="submit"
+                        class="flex-1 py-2 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition-colors">
+                    Confirmer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openTheoSitModal(level, levelLabel, sit, sitLabel) {
+    document.getElementById('theo-sit-level').value     = level;
+    document.getElementById('theo-sit-situation').value = sit;
+    document.getElementById('theo-sit-modal-text').textContent =
+        'Définir le statut de ' + levelLabel + ' sur « ' + sitLabel + ' » ?';
+    var m = document.getElementById('theo-sit-modal');
+    m.style.removeProperty('display');
+    m.style.display = 'flex';
+}
+function closeTheoSitModal() {
+    document.getElementById('theo-sit-modal').style.display = 'none';
+}
+document.getElementById('theo-sit-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeTheoSitModal();
+});
+</script>

@@ -43,6 +43,7 @@ Route::prefix('formateur')->name('instructor.')->group(function () {
     Route::post('/stagiaire/{trainee}/jalons',   [InstructorController::class, 'saveProjectMilestones'])->name('milestones.save');
     Route::post('/uc3/{trainee}',                 [InstructorController::class, 'saveUc3'])->name('uc3.save');
     Route::post('/uc3/{trainee}/seance',          [InstructorController::class, 'saveUc3Seance'])->name('uc3.seance.save');
+    Route::post('/uc3/{trainee}/theo-sit',        [InstructorController::class, 'saveTheoSitOverride'])->name('uc3.theo.sit.save');
     Route::post('/epmsp/{trainee}/{type}',        [InstructorController::class, 'saveEpmsp'])->name('epmsp.save');
     Route::get('/stagiaire/{trainee}/positionnement',         [InstructorController::class, 'positioning'])->name('positioning');
     Route::post('/stagiaire/{trainee}/positionnement',        [InstructorController::class, 'savePositioning'])->name('positioning.save');
