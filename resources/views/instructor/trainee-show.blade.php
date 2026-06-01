@@ -212,8 +212,19 @@
         {{-- Subtab: Auto-évaluation --}}
         <div id="subtab-profil-autoeval" class="subtab-panel" style="display:none">
         @if($assessments->isNotEmpty())
-            <div class="bg-white rounded-xl border border-slate-200 p-6">
-                <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1">Auto-évaluation initiale</h2>
+
+            {{-- ── View mode ──────────────────────────────────────────────── --}}
+            <div id="autoeval-view" class="bg-white rounded-xl border border-slate-200 p-6">
+                <div class="flex items-center justify-between mb-1">
+                    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Auto-évaluation initiale</h2>
+                    <button type="button" id="autoeval-edit-btn"
+                            class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:border-sky-300 hover:text-sky-600 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828A2 2 0 0110 16.414H8v-2a2 2 0 01.586-1.414z"/>
+                        </svg>
+                        Modifier
+                    </button>
+                </div>
                 <p class="text-xs text-slate-400 mb-6">1 = aucune notion · 2 = avec aide · 3 = autonome</p>
 
                 <div class="space-y-6">
@@ -269,6 +280,87 @@
                     @endforeach
                 </div>
             </div>
+
+            {{-- ── Edit form (hidden by default) ──────────────────────────── --}}
+            <div id="autoeval-form-wrap" style="display:none">
+                <form method="POST" action="{{ route('instructor.initial-autoeval.save', $trainee) }}" id="autoeval-form">
+                    @csrf
+                    <div class="bg-white rounded-xl border border-sky-200 p-6">
+                        <div class="flex items-center justify-between mb-1">
+                            <h2 class="text-sm font-semibold text-sky-600 uppercase tracking-wide">Modifier l'auto-évaluation</h2>
+                            <button type="button" id="autoeval-cancel-btn"
+                                    class="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+                                Annuler
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-6">1 = aucune notion · 2 = avec aide · 3 = autonome</p>
+
+                        <div class="space-y-8">
+                            @foreach($assessments as $category => $items)
+                                <section>
+                                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3 pb-2 border-b border-slate-100">
+                                        {{ $category }}
+                                    </h3>
+                                    <div class="space-y-3">
+                                        @foreach($items as $item)
+                                            @php $cid = $item->competency_id; $cur = (int)$item->trainee_score; @endphp
+                                            <div class="bg-slate-50 rounded-lg border border-slate-100 p-3">
+                                                <p class="text-xs font-medium text-slate-700 leading-snug mb-2">{{ $item->competency->label }}</p>
+                                                <div class="flex gap-2 mb-2">
+                                                    <label class="flex-1 cursor-pointer">
+                                                        <input type="radio" name="scores[{{ $cid }}]" value="1"
+                                                               class="sr-only peer" {{ $cur === 1 ? 'checked' : '' }} required>
+                                                        <div class="rounded-lg border-2 border-slate-200 py-1.5 text-center
+                                                                    peer-checked:border-red-400 peer-checked:bg-red-50
+                                                                    hover:border-slate-300 transition-colors">
+                                                            <span class="block text-sm font-bold text-slate-400 peer-checked:text-red-600">1</span>
+                                                        </div>
+                                                    </label>
+                                                    <label class="flex-1 cursor-pointer">
+                                                        <input type="radio" name="scores[{{ $cid }}]" value="2"
+                                                               class="sr-only peer" {{ $cur === 2 ? 'checked' : '' }}>
+                                                        <div class="rounded-lg border-2 border-slate-200 py-1.5 text-center
+                                                                    peer-checked:border-amber-400 peer-checked:bg-amber-50
+                                                                    hover:border-slate-300 transition-colors">
+                                                            <span class="block text-sm font-bold text-slate-400 peer-checked:text-amber-600">2</span>
+                                                        </div>
+                                                    </label>
+                                                    <label class="flex-1 cursor-pointer">
+                                                        <input type="radio" name="scores[{{ $cid }}]" value="3"
+                                                               class="sr-only peer" {{ $cur === 3 ? 'checked' : '' }}>
+                                                        <div class="rounded-lg border-2 border-slate-200 py-1.5 text-center
+                                                                    peer-checked:border-emerald-400 peer-checked:bg-emerald-50
+                                                                    hover:border-slate-300 transition-colors">
+                                                            <span class="block text-sm font-bold text-slate-400 peer-checked:text-emerald-600">3</span>
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                                <input type="text"
+                                                       name="evidence[{{ $cid }}]"
+                                                       value="{{ old("evidence.{$cid}", $item->trainee_evidence) }}"
+                                                       placeholder="Justification (optionnel)"
+                                                       class="w-full text-xs rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-slate-600 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-transparent">
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </section>
+                            @endforeach
+                        </div>
+
+                        <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
+                            <button type="button" id="autoeval-cancel-btn2"
+                                    class="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+                                Annuler
+                            </button>
+                            <button type="submit"
+                                    class="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium rounded-lg transition-colors">
+                                Enregistrer
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
         @else
             <div class="bg-white rounded-xl border border-slate-200 p-10 text-center">
                 <p class="text-sm text-slate-400">L'auto-évaluation n'a pas encore été complétée.</p>
@@ -996,6 +1088,9 @@
                                     @if($event['situation'])
                                         <div style="font-size:11px; color:#64748b; margin-top:2px;">{{ $event['situation'] }}</div>
                                     @endif
+                                    @if($event['global_comment'] ?? null)
+                                        <div style="font-size:11px; color:#475569; margin-top:4px; font-style:italic; line-height:1.4;">{{ $event['global_comment'] }}</div>
+                                    @endif
                                     <div style="font-size:11px; color:#94a3b8; margin-top:2px;">{{ \Carbon\Carbon::parse($event['date'])->locale('fr')->isoFormat('D MMMM YYYY') }}</div>
                                 </div>
                                 <div style="flex-shrink:0; align-self:flex-start; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
@@ -1188,6 +1283,33 @@ function saveFeedbackEdit(id, url) {
     })
     .catch(() => errEl.classList.remove('hidden'));
 }
+
+// ── Auto-eval inline edit toggle ──────────────────────────────────────────────
+(function () {
+    const editBtn    = document.getElementById('autoeval-edit-btn');
+    const viewWrap   = document.getElementById('autoeval-view');
+    const formWrap   = document.getElementById('autoeval-form-wrap');
+    const cancelBtns = [
+        document.getElementById('autoeval-cancel-btn'),
+        document.getElementById('autoeval-cancel-btn2'),
+    ];
+
+    if (!editBtn) return;
+
+    editBtn.addEventListener('click', function () {
+        viewWrap.style.display = 'none';
+        formWrap.style.display = '';
+        formWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    cancelBtns.forEach(function (btn) {
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            formWrap.style.display = 'none';
+            viewWrap.style.display = '';
+        });
+    });
+})();
 
 </script>
 

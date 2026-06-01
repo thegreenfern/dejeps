@@ -16,6 +16,9 @@ Route::get('/notifications/{notification}/lire', [NotificationController::class,
 Route::get('/documents/uc12/{document}', [DocumentController::class, 'downloadUc12'])->name('uc12.document.download');
 Route::get('/calendrier', [CalendarController::class, 'index'])->name('calendar.index');
 Route::post('/calendrier/sync', [CalendarController::class, 'sync'])->name('calendar.sync');
+Route::post('/calendrier', [CalendarController::class, 'store'])->name('calendar.store');
+Route::put('/calendrier/{event}', [CalendarController::class, 'update'])->name('calendar.update');
+Route::delete('/calendrier/{event}', [CalendarController::class, 'destroy'])->name('calendar.destroy');
 
 // Onboarding wizard (no role guard — trainee identity lives in session)
 Route::prefix('onboarding')->name('onboarding.')->group(function () {
@@ -48,9 +51,14 @@ Route::prefix('formateur')->name('instructor.')->group(function () {
     Route::get('/stagiaire/{trainee}/positionnement',         [InstructorController::class, 'positioning'])->name('positioning');
     Route::post('/stagiaire/{trainee}/positionnement',        [InstructorController::class, 'savePositioning'])->name('positioning.save');
     Route::get('/stagiaire/{trainee}/positionnement/rapport', [InstructorController::class, 'positioningReport'])->name('positioning-report');
+    Route::post('/stagiaire/{trainee}/auto-eval',             [InstructorController::class, 'saveInitialAutoeval'])->name('initial-autoeval.save');
 
     Route::post('/stagiaire/{trainee}/peda/statut', [InstructorController::class, 'savePedaStatus'])->name('peda.status.save');
     Route::patch('/retour/{notification}',           [InstructorController::class, 'updateFeedback'])->name('feedback.update');
+    Route::get('/aide',                              [InstructorController::class, 'aide'])->name('aide');
+    Route::get('/config/progression',               [InstructorController::class, 'progressionConfig'])->name('progression-config');
+    Route::post('/config/progression',              [InstructorController::class, 'saveProgressionConfig'])->name('progression-config.save');
+    Route::post('/config/progression/{trainee}',    [InstructorController::class, 'saveTraineeThresholds'])->name('progression-config.trainee.save');
 });
 
 // Trainee routes
@@ -66,4 +74,6 @@ Route::prefix('stagiaire')->name('trainee.')->group(function () {
     Route::get('/seances/{slug}/modifier',          [TraineeController::class, 'editSeance'])->name('seances.edit');
     Route::post('/seances',                         [TraineeController::class, 'saveSeance'])->name('seances.save');
     Route::delete('/seances/{slug}',                [TraineeController::class, 'deleteSeance'])->name('seances.delete');
+    Route::get('/pedagogie',                        [TraineeController::class, 'peda'])->name('peda');
+    Route::get('/parcours',                         [TraineeController::class, 'parcours'])->name('parcours');
 });

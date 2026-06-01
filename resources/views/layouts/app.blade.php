@@ -19,6 +19,25 @@
                     Suivi DEJEPS
                 </a>
                 <div class="flex items-center gap-5">
+                    {{-- Instructor-only links --}}
+                    @if(session('role') === 'instructor')
+                    <a href="{{ route('instructor.progression-config') }}"
+                       class="inline-flex items-center gap-1.5 text-xs font-medium transition-colors
+                              {{ request()->routeIs('instructor.progression-config') ? 'text-violet-600' : 'text-slate-400 hover:text-slate-600' }}">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"/>
+                        </svg>
+                        Progression
+                    </a>
+                    <a href="{{ route('instructor.aide') }}"
+                       class="inline-flex items-center gap-1.5 text-xs font-medium transition-colors
+                              {{ request()->routeIs('instructor.aide') ? 'text-violet-600' : 'text-slate-400 hover:text-slate-600' }}">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/>
+                        </svg>
+                        Aide
+                    </a>
+                    @endif
                     {{-- Calendar link --}}
                     <a href="{{ route('calendar.index') }}"
                        class="inline-flex items-center gap-1.5 text-xs font-medium transition-colors

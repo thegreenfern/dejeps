@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\AppNotification;
+use App\Models\CalendarEvent;
 use App\Models\ProgramSettings;
 use App\Models\Trainee;
 use App\Models\Uc12Document;
 use App\Models\TraineeProfile;
+use App\Models\TraineePedaStatus;
+use App\Models\TraineePedaTheoStatus;
 use App\Models\TraineeUc3;
 use App\Models\TraineeUcProgress;
 use Illuminate\Http\Request;
@@ -293,6 +296,316 @@ class TraineeController extends Controller
         }
 
         return redirect()->route('trainee.dashboard')->with('success', 'Séance supprimée.');
+    }
+
+    public function peda()
+    {
+        $trainee = $this->requireTrainee();
+        $trainee->load('uc3');
+
+        $pedaData     = $this->buildPedaData($trainee);
+        $pedaTheoData = $this->buildTheoData($trainee);
+
+        return view('trainee.peda', compact('trainee', 'pedaData', 'pedaTheoData'));
+    }
+
+    private function buildPedaData(Trainee $trainee): array
+    {
+        $uc3           = $trainee->uc3;
+        $topicProgress = $uc3?->topic_progress ?? [];
+        $overrides     = $uc3?->peda_timeline_overrides ?? [];
+        $today         = Carbon::today();
+
+        $asanaBaseline    = $this->buildAsanaBaseline();
+        $settings         = ProgramSettings::instance();
+        $thresholds       = TraineePedaStatus::resolveThresholds($trainee->profile, $settings);
+        $existingStatuses = TraineePedaStatus::where('trainee_id', $trainee->id)
+            ->get()->keyBy('level');
+
+        $pedaData = [];
+
+        foreach (TraineePedaStatus::LEVELS as $level) {
+            $record    = $existingStatuses->get($level);
+            $persisted = $record?->status ?? 'nt';
+
+            $aCounts    = TraineePedaStatus::countAGradesBySituation($topicProgress, $level);
+            $autoStatus = TraineePedaStatus::computeAutoStatus($aCounts, $thresholds);
+
+            if (TraineePedaStatus::statusIndex($autoStatus) > TraineePedaStatus::statusIndex($persisted) && !($record?->is_manual ?? false)) {
+                $persisted = $autoStatus;
+            }
+
+            $prefixes = TraineePedaStatus::LEVEL_SLUG_PREFIXES[$level];
+            $counts   = array_fill_keys(
+                ['observation', 'supervision_directe', 'supervision_indirecte', 'autonomie'],
+                ['total' => 0, '3' => 0, '2' => 0]
+            );
+            foreach ($topicProgress as $slug => $data) {
+                $matches = false;
+                foreach ($prefixes as $prefix) {
+                    if (str_starts_with($slug, $prefix)) { $matches = true; break; }
+                }
+                if (!$matches) continue;
+                $sit = $data['situation'] ?? null;
+                $rat = match($data['global_rating'] ?? null) { 'A' => '3', 'ECA' => '2', 'NT' => null, default => $data['global_rating'] ?? null };
+                if ($sit && isset($counts[$sit])) {
+                    $counts[$sit]['total']++;
+                    if ($rat === '3') $counts[$sit]['3']++;
+                    if ($rat === '2') $counts[$sit]['2']++;
+                }
+            }
+
+            $levelTimeline = [];
+            $statusIdx     = TraineePedaStatus::statusIndex($persisted);
+            foreach (['observation', 'supervision_directe', 'supervision_indirecte', 'autonomie'] as $sit) {
+                $base = $asanaBaseline[$level][$sit] ?? null;
+                if (!$base) { $levelTimeline[$sit] = null; continue; }
+
+                $dueStr   = $overrides[$level][$sit . '_due'] ?? $base['due'];
+                $due      = $dueStr ? Carbon::parse($dueStr) : null;
+                $achieved = TraineePedaStatus::statusIndex($sit) <= $statusIdx;
+                $daysLeft = $due ? $today->diffInDays($due, false) : null;
+                $atRisk   = !$achieved && $daysLeft !== null && $daysLeft <= 3;
+
+                $levelTimeline[$sit] = [
+                    'due'       => $due?->format('Y-m-d'),
+                    'days_left' => $daysLeft,
+                    'achieved'  => $achieved,
+                    'at_risk'   => $atRisk,
+                ];
+            }
+
+            $pedaData[$level] = [
+                'label'    => TraineePedaStatus::LEVEL_LABELS[$level],
+                'status'   => $persisted,
+                'counts'   => $counts,
+                'timeline' => $levelTimeline,
+            ];
+        }
+
+        $examEvent = CalendarEvent::where('section', 'UC3 / UC4')
+            ->where('event_type', 'Examen')
+            ->where('name', 'like', '%édagogie pratique%')
+            ->first();
+
+        return [
+            'levels'    => $pedaData,
+            'exam_date' => $examEvent?->due_on?->format('Y-m-d') ?? '2026-10-02',
+        ];
+    }
+
+    private function buildAsanaBaseline(): array
+    {
+        $nameMap = [
+            'Baptême - Observation'               => ['bapteme', 'observation'],
+            'Baptême - Supervision directe'       => ['bapteme', 'supervision_directe'],
+            'Baptême - Supervision indirecte'     => ['bapteme', 'supervision_indirecte'],
+            'Baptême - Autonomie'                 => ['bapteme', 'autonomie'],
+            'Pratique N1 - Observation'           => ['n1', 'observation'],
+            'Pratique N1 - Supervision directe'   => ['n1', 'supervision_directe'],
+            'Pratique N1 - Supervision indirecte' => ['n1', 'supervision_indirecte'],
+            'Pratique N1 - Autonomie'             => ['n1', 'autonomie'],
+            'Pratique N2 - Observation'           => ['n2', 'observation'],
+            'Pratique N2 - Supervision directe'   => ['n2', 'supervision_directe'],
+            'Pratique N2 - Supervision indirecte' => ['n2', 'supervision_indirecte'],
+            'Pratique N3 - Observation'           => ['n3', 'observation'],
+            'Pratique N3 - Supervision directe'   => ['n3', 'supervision_directe'],
+        ];
+
+        $baseline = ['bapteme' => [], 'n1' => [], 'n2' => [], 'n3' => []];
+
+        CalendarEvent::where('section', 'UC3 / UC4')
+            ->whereIn('event_type', ['Observation', 'Supervision directe', 'Supervision indirecte', 'Autonomie'])
+            ->get()
+            ->each(function ($event) use (&$baseline, $nameMap) {
+                if (isset($nameMap[$event->name])) {
+                    [$level, $sit] = $nameMap[$event->name];
+                    $baseline[$level][$sit] = [
+                        'start' => $event->start_on?->format('Y-m-d'),
+                        'due'   => $event->due_on?->format('Y-m-d'),
+                    ];
+                }
+            });
+
+        return $baseline;
+    }
+
+    private function buildTheoData(Trainee $trainee): array
+    {
+        $uc3           = $trainee->uc3;
+        $topicProgress = $uc3?->topic_progress ?? [];
+        $overrides     = $uc3?->peda_theo_timeline_overrides ?? [];
+        $today         = Carbon::today();
+
+        $asanaNameMap = [
+            'Théorie N1: Simulation, Observation, Supervision directe' => 'n1',
+            'Théorie N2: Simulation, Observation, Supervision directe' => 'n2',
+            'Théorie N3: Simulation'                                   => 'n3',
+            'Théorie N4'                                               => 'n4',
+        ];
+
+        $baseline = [];
+        CalendarEvent::where('section', 'UC3 / UC4')
+            ->where('event_type', 'Formation')
+            ->whereIn('name', array_keys($asanaNameMap))
+            ->get()
+            ->each(function ($event) use (&$baseline, $asanaNameMap) {
+                $level = $asanaNameMap[$event->name];
+                $baseline[$level] = [
+                    'start' => $event->start_on?->format('Y-m-d'),
+                    'due'   => $event->due_on?->format('Y-m-d'),
+                ];
+            });
+
+        $allDejepsSlugs = array_merge(...array_values(TraineePedaTheoStatus::LEVEL_TOPICS));
+
+        $coveredSlugs = array_filter($allDejepsSlugs, function ($slug) use ($topicProgress) {
+            $entry  = $topicProgress[$slug] ?? null;
+            $rating = match($entry['global_rating'] ?? null) { 'A' => '3', 'ECA' => '2', 'NT' => null, default => $entry['global_rating'] ?? null };
+            return $rating === '3' || $rating === '2';
+        });
+        $coverage = [
+            'covered' => count($coveredSlugs),
+            'total'   => count($allDejepsSlugs),
+        ];
+
+        $theoSits     = ['observation', 'supervision_directe', 'supervision_indirecte', 'autonomie'];
+        $sitOverrides = $uc3?->theo_sit_overrides ?? [];
+        $levels       = [];
+
+        foreach (TraineePedaTheoStatus::LEVELS as $level) {
+            $computedStatus = TraineePedaTheoStatus::computeStatus($topicProgress, $level);
+
+            $sitCounts = array_fill_keys($theoSits, 0);
+            foreach (TraineePedaTheoStatus::LEVEL_TOPICS[$level] ?? [] as $slug) {
+                $sit = $topicProgress[$slug]['situation'] ?? null;
+                if ($sit && isset($sitCounts[$sit])) $sitCounts[$sit]++;
+            }
+            foreach ($topicProgress as $slug => $entry) {
+                if (!str_starts_with($slug, 'autre__')) continue;
+                if (strtolower($entry['session_level'] ?? '') !== strtolower($level)) continue;
+                $sit = $entry['situation'] ?? null;
+                if ($sit && isset($sitCounts[$sit])) $sitCounts[$sit]++;
+            }
+            $sitStatus = 'nt';
+            foreach (array_reverse($theoSits) as $sit) {
+                if ($sitCounts[$sit] > 0) { $sitStatus = $sit; break; }
+            }
+
+            $base     = $baseline[$level] ?? null;
+            $dueStr   = $overrides[$level . '_due'] ?? $base['due'] ?? null;
+            $due      = $dueStr ? Carbon::parse($dueStr) : null;
+            $achieved = $computedStatus === 'valide';
+            $daysLeft = $due ? $today->diffInDays($due, false) : null;
+            $atRisk   = !$achieved && $daysLeft !== null && $daysLeft <= 3;
+
+            $levels[$level] = [
+                'label'      => TraineePedaTheoStatus::LEVEL_LABELS[$level],
+                'status'     => $computedStatus,
+                'sit_status' => $sitOverrides[$level] ?? $sitStatus,
+                'topics'     => TraineePedaTheoStatus::topicDetails($topicProgress, $level),
+                'autre'      => TraineePedaTheoStatus::autreSeances($topicProgress, $level),
+                'timeline'   => $due ? [
+                    'due'       => $due->format('Y-m-d'),
+                    'days_left' => $daysLeft,
+                    'achieved'  => $achieved,
+                    'at_risk'   => $atRisk,
+                ] : null,
+            ];
+        }
+
+        $examEvent = CalendarEvent::where('section', 'UC3 / UC4')
+            ->where('event_type', 'Examen')
+            ->where('name', 'like', '%édag%théor%')
+            ->first();
+
+        return [
+            'levels'    => $levels,
+            'coverage'  => $coverage,
+            'exam_date' => $examEvent?->due_on?->format('Y-m-d') ?? '2026-09-18',
+        ];
+    }
+
+    public function parcours()
+    {
+        $trainee  = $this->requireTrainee();
+        $settings = ProgramSettings::instance();
+        $timeline = $this->buildTimeline($trainee, $settings);
+        return view('trainee.parcours', compact('trainee', 'timeline'));
+    }
+
+    private function buildTimeline(Trainee $trainee, ProgramSettings $settings): array
+    {
+        $events = [];
+        $today  = Carbon::today();
+
+        $deadlines = [
+            ['key' => 'uc1_submission_deadline', 'label' => 'Dépôt dossier UC1', 'icon' => 'document'],
+            ['key' => 'uc1_jury_date',           'label' => 'Jury UC1',           'icon' => 'star'],
+            ['key' => 'uc2_submission_deadline', 'label' => 'Dépôt dossier UC2', 'icon' => 'document'],
+            ['key' => 'uc2_jury_date',           'label' => 'Jury UC2',           'icon' => 'star'],
+            ['key' => 'epmsp_date',              'label' => 'EPMSP',              'icon' => 'flag'],
+        ];
+
+        foreach ($deadlines as $dl) {
+            $date = $settings->{$dl['key']};
+            if (!$date) continue;
+            $carbon = Carbon::instance($date);
+            $events[] = [
+                'type'  => 'deadline',
+                'date'  => $carbon->format('Y-m-d'),
+                'label' => $dl['label'],
+                'icon'  => $dl['icon'],
+                'past'  => $carbon->lt($today),
+                'days'  => (int) $today->diffInDays($carbon, false),
+            ];
+        }
+
+        $topicProgress = $trainee->uc3?->topic_progress ?? [];
+        $topicsById    = collect(TraineeUc3::topics())->keyBy('slug');
+
+        foreach ($topicProgress as $slug => $entry) {
+            if (empty($entry['session_date'])) continue;
+            $topicInfo = $topicsById->get($slug);
+            $label     = $topicInfo ? $topicInfo['label'] : ($entry['session_label'] ?? $slug);
+            $level     = $topicInfo ? strtoupper($topicInfo['level']) : strtoupper($entry['session_level'] ?? '');
+            $rawGrade  = $entry['global_rating'] ?? null;
+            $rating    = match($rawGrade) {
+                '3', 'A'   => 'A',
+                '2', 'ECA' => 'ECA',
+                '1', 'NT'  => 'NT',
+                default    => null,
+            };
+            $events[] = [
+                'type'           => 'session',
+                'date'           => $entry['session_date'],
+                'label'          => $label,
+                'level'          => $level ?: null,
+                'situation'      => $entry['situation'] ?? null,
+                'rating'         => $rating,
+                'global_comment' => $entry['global_comment'] ?? null,
+                'past'           => true,
+                'slug'           => $slug,
+                'is_autre'       => str_starts_with($slug, 'autre__'),
+            ];
+        }
+
+        usort($events, fn($a, $b) => strcmp($a['date'], $b['date']));
+
+        $ongoing = CalendarEvent::where('start_on', '<=', $today)
+            ->where('due_on', '>=', $today)
+            ->orderBy('due_on')
+            ->get(['name', 'event_type', 'due_on'])
+            ->map(fn($e) => [
+                'name'      => $e->name,
+                'type'      => $e->event_type,
+                'due'       => $e->due_on->format('Y-m-d'),
+                'days_left' => (int) $today->diffInDays($e->due_on, false),
+            ])
+            ->values()
+            ->all();
+
+        return ['events' => $events, 'ongoing' => $ongoing];
     }
 
     private function requireTrainee(): Trainee

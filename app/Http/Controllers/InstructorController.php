@@ -286,6 +286,29 @@ class InstructorController extends Controller
         return view('instructor.positioning', compact('trainee', 'competencies', 'assessments'));
     }
 
+    public function saveInitialAutoeval(Request $request, Trainee $trainee)
+    {
+        $data = $request->validate([
+            'scores'    => ['required', 'array'],
+            'scores.*'  => ['required', 'in:1,2,3'],
+            'evidence'  => ['nullable', 'array'],
+            'evidence.*' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        foreach ($data['scores'] as $competencyId => $score) {
+            InitialAssessment::updateOrCreate(
+                ['trainee_id' => $trainee->id, 'competency_id' => $competencyId],
+                [
+                    'trainee_score'    => $score,
+                    'trainee_evidence' => trim($data['evidence'][$competencyId] ?? '') ?: null,
+                ]
+            );
+        }
+
+        return redirect(route('instructor.trainee.show', $trainee) . '#profil')
+            ->with('success', 'Auto-évaluation mise à jour.');
+    }
+
     public function savePositioning(Request $request, Trainee $trainee)
     {
         $data = $request->validate([
@@ -424,6 +447,48 @@ class InstructorController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    // ── Progression config ────────────────────────────────────────────────
+
+    public function progressionConfig()
+    {
+        $settings  = ProgramSettings::instance();
+        $trainees  = Trainee::with('profile')
+            ->whereHas('profile', fn($q) => $q->whereNotNull('completed_at'))
+            ->orderBy('name')
+            ->get();
+
+        return view('instructor.progression-config', compact('settings', 'trainees'));
+    }
+
+    public function saveProgressionConfig(Request $request)
+    {
+        $data = $request->validate([
+            'threshold_obs_sd'  => ['required', 'integer', 'min:1', 'max:10'],
+            'threshold_sd_si'   => ['required', 'integer', 'min:1', 'max:10'],
+            'threshold_si_auto' => ['required', 'integer', 'min:1', 'max:10'],
+        ]);
+
+        ProgramSettings::instance()->update($data);
+
+        return redirect()->route('instructor.progression-config')
+            ->with('success', 'Paramètres globaux enregistrés.');
+    }
+
+    public function saveTraineeThresholds(Request $request, Trainee $trainee)
+    {
+        $data = $request->validate([
+            'peda_threshold_obs_sd'  => ['nullable', 'integer', 'min:1', 'max:10'],
+            'peda_threshold_sd_si'   => ['nullable', 'integer', 'min:1', 'max:10'],
+            'peda_threshold_si_auto' => ['nullable', 'integer', 'min:1', 'max:10'],
+        ]);
+
+        $profile = $trainee->profile ?? $trainee->profile()->create(['trainee_id' => $trainee->id]);
+        $profile->update($data);
+
+        return redirect()->route('instructor.progression-config')
+            ->with('success', "Seuils de {$trainee->name} mis à jour.");
+    }
+
     // ── Peda ──────────────────────────────────────────────────────────────
 
     public function savePedaStatus(Request $request, Trainee $trainee)
@@ -450,6 +515,9 @@ class InstructorController extends Controller
 
         $asanaBaseline = $this->buildAsanaBaseline();
 
+        $settings   = ProgramSettings::instance();
+        $thresholds = TraineePedaStatus::resolveThresholds($trainee->profile, $settings);
+
         $existingStatuses = TraineePedaStatus::where('trainee_id', $trainee->id)
             ->get()->keyBy('level');
 
@@ -461,7 +529,7 @@ class InstructorController extends Controller
             $isManual  = $record?->is_manual ?? false;
 
             $aCounts    = TraineePedaStatus::countAGradesBySituation($topicProgress, $level);
-            $autoStatus = TraineePedaStatus::computeAutoStatus($aCounts);
+            $autoStatus = TraineePedaStatus::computeAutoStatus($aCounts, $thresholds);
 
             $pendingAuto = null;
 
@@ -762,22 +830,24 @@ class InstructorController extends Controller
             $topicInfo = $topicsById->get($slug);
             $label     = $topicInfo ? $topicInfo['label'] : ($entry['session_label'] ?? $slug);
             $level     = $topicInfo ? strtoupper($topicInfo['level']) : strtoupper($entry['session_level'] ?? '');
-            $rating    = match($entry['global_rating'] ?? null) {
-                'A'   => 'A',
-                'ECA' => 'ECA',
-                'NT'  => 'NT',
-                default => null,
+            $rawGrade = $entry['global_rating'] ?? null;
+            $rating   = match($rawGrade) {
+                '3', 'A'   => 'A',
+                '2', 'ECA' => 'ECA',
+                '1', 'NT'  => 'NT',
+                default    => null,
             };
             $events[] = [
-                'type'      => 'session',
-                'date'      => $entry['session_date'],
-                'label'     => $label,
-                'level'     => $level ?: null,
-                'situation' => $entry['situation'] ?? null,
-                'rating'    => $rating,
-                'past'      => true,
-                'slug'      => $slug,
-                'is_autre'  => str_starts_with($slug, 'autre__'),
+                'type'           => 'session',
+                'date'           => $entry['session_date'],
+                'label'          => $label,
+                'level'          => $level ?: null,
+                'situation'      => $entry['situation'] ?? null,
+                'rating'         => $rating,
+                'global_comment' => $entry['global_comment'] ?? null,
+                'past'           => true,
+                'slug'           => $slug,
+                'is_autre'       => str_starts_with($slug, 'autre__'),
             ];
         }
 
@@ -797,5 +867,10 @@ class InstructorController extends Controller
             ->all();
 
         return ['events' => $events, 'ongoing' => $ongoing];
+    }
+
+    public function aide()
+    {
+        return view('instructor.aide');
     }
 }

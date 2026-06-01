@@ -17,6 +17,9 @@ class TraineeProfile extends Model
         'big5_scores',
         'big5_completed_at',
         'trainee_comments',
+        'peda_threshold_obs_sd',
+        'peda_threshold_sd_si',
+        'peda_threshold_si_auto',
     ];
 
     protected $casts = [

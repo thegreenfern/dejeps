@@ -100,13 +100,21 @@ class TraineePedaStatus extends Model
 
     /**
      * Compute the status the automation engine would assign.
-     * Does NOT apply manual-override protection — caller handles that.
+     * $thresholds: ['obs_sd' => int, 'sd_si' => int, 'si_auto' => int]
+     * Defaults to A_GRADES_NEEDED for any missing key.
      */
-    public static function computeAutoStatus(array $aGradesBySituation): string
+    public static function computeAutoStatus(array $aGradesBySituation, array $thresholds = []): string
     {
+        $needed = [
+            'observation'           => $thresholds['obs_sd']   ?? self::A_GRADES_NEEDED,
+            'supervision_directe'   => $thresholds['sd_si']    ?? self::A_GRADES_NEEDED,
+            'supervision_indirecte' => $thresholds['si_auto']  ?? self::A_GRADES_NEEDED,
+            'autonomie'             => 1,
+        ];
+
         $status = 'nt';
         foreach (['observation', 'supervision_directe', 'supervision_indirecte', 'autonomie'] as $situation) {
-            if (($aGradesBySituation[$situation] ?? 0) >= self::A_GRADES_NEEDED) {
+            if (($aGradesBySituation[$situation] ?? 0) >= $needed[$situation]) {
                 $status = $situation;
             } else {
                 break;
@@ -116,14 +124,24 @@ class TraineePedaStatus extends Model
     }
 
     /**
-     * Check if the automation engine would advance beyond current persisted status,
-     * returning the new computed status if so, or null if no change.
-     * Automation never moves backward.
+     * Resolve effective thresholds for a trainee, falling back to global settings.
      */
-    public static function checkAutomation(string $currentStatus, array $topicProgress, string $level): ?string
+    public static function resolveThresholds(?object $profile, object $settings): array
     {
-        $aGrades     = self::countAGradesBySituation($topicProgress, $level);
-        $autoStatus  = self::computeAutoStatus($aGrades);
+        return [
+            'obs_sd'  => $profile?->peda_threshold_obs_sd  ?? $settings->threshold_obs_sd  ?? self::A_GRADES_NEEDED,
+            'sd_si'   => $profile?->peda_threshold_sd_si   ?? $settings->threshold_sd_si   ?? self::A_GRADES_NEEDED,
+            'si_auto' => $profile?->peda_threshold_si_auto ?? $settings->threshold_si_auto ?? self::A_GRADES_NEEDED,
+        ];
+    }
+
+    /**
+     * Check if the automation engine would advance beyond current persisted status.
+     */
+    public static function checkAutomation(string $currentStatus, array $topicProgress, string $level, array $thresholds = []): ?string
+    {
+        $aGrades    = self::countAGradesBySituation($topicProgress, $level);
+        $autoStatus = self::computeAutoStatus($aGrades, $thresholds);
 
         if (self::statusIndex($autoStatus) > self::statusIndex($currentStatus)) {
             return $autoStatus;

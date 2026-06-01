@@ -210,7 +210,7 @@ class OnboardingController extends Controller
             array_push($hidden, 'Accueil du public', 'Gestion d\'équipe');
         }
         if (($priorExp['has_diving_work'] ?? null) === false) {
-            array_push($hidden, 'Utilisation du matériel de plongée', 'Utilisation d\'un navire');
+            $hidden[] = 'Utilisation du matériel de plongée';
         }
         if (($priorExp['has_guided'] ?? null) === false) {
             $hidden[] = 'Conduite de palanquée (zone 0–40m)';

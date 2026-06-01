@@ -149,6 +149,12 @@
                             <span style="width:8px; height:8px; border-radius:50%; background:#2563eb; flex-shrink:0;"></span>
                             <span class="text-[11px] font-bold text-blue-700 uppercase tracking-wider">UC1 / UC2</span>
                             <span class="text-[10px] text-blue-400 font-medium">{{ $uc12Events->count() }} tâches</span>
+                            @if($role === 'instructor')
+                            <button type="button"
+                                    onclick="openCalModal(null, 'UC1 / UC2')"
+                                    class="ml-auto inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors text-xs font-bold leading-none"
+                                    title="Ajouter une tâche UC1/UC2">+</button>
+                            @endif
                         </div>
                     </div>
                     <div style="width: {{ $totalChartPx }}px; flex-shrink: 0; height: 32px;"></div>
@@ -171,10 +177,26 @@
                     {{-- Label cell --}}
                     <div style="width: {{ $labelPx }}px; flex-shrink: 0; position: sticky; left: 0; z-index: 15; background: white; border-right: 1px solid #e2e8f0; padding: 0 16px; min-height: 48px; display: flex; flex-direction: column; justify-content: center; transition: background 0.1s;"
                          class="group-hover:bg-slate-50/90">
-                        <span class="block text-[10px] font-semibold text-slate-700 leading-snug"
-                              style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: {{ $labelPx - 32 }}px;"
-                              title="{{ $event->name }}">{{ $event->name }}</span>
-                        <span class="block text-[10px] text-slate-400 mt-0.5 tabular-nums">{{ $dateStr }}</span>
+                        <div class="flex items-center gap-1" style="max-width: {{ $labelPx - 32 }}px;">
+                            <span class="block text-[11px] font-semibold text-slate-700 leading-snug flex-1 min-w-0"
+                                  style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                                  title="{{ $event->name }}">{{ $event->name }}</span>
+                            @if($role === 'instructor')
+                            <span class="cal-row-actions flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                                <button type="button"
+                                        onclick="openCalModal({{ json_encode(['id'=>$event->id,'name'=>$event->name,'section'=>$event->section,'event_type'=>$event->event_type,'start_on'=>$event->start_on?->format('Y-m-d'),'due_on'=>$event->due_on?->format('Y-m-d')]) }})"
+                                        class="p-0.5 rounded text-slate-400 hover:text-sky-600 hover:bg-sky-50 transition-colors" title="Modifier">
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828A2 2 0 0110 16.414H8v-2a2 2 0 01.586-1.414z"/></svg>
+                                </button>
+                                <button type="button"
+                                        onclick="confirmDeleteCal({{ $event->id }}, '{{ addslashes($event->name) }}')"
+                                        class="p-0.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Supprimer">
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                            </span>
+                            @endif
+                        </div>
+                        <span class="block text-[11px] text-slate-400 mt-0.5 tabular-nums">{{ $dateStr }}</span>
                     </div>
                     {{-- Chart track --}}
                     <div data-chart-track style="width: {{ $totalChartPx }}px; flex-shrink: 0; position: relative; min-height: 48px;"
@@ -233,6 +255,12 @@
                             <span style="width:8px; height:8px; border-radius:50%; background:#0284c7; flex-shrink:0;"></span>
                             <span class="text-[11px] font-bold text-sky-700 uppercase tracking-wider">UC3 / UC4</span>
                             <span class="text-[10px] text-sky-400 font-medium">{{ $uc34Events->count() }} tâches</span>
+                            @if($role === 'instructor')
+                            <button type="button"
+                                    onclick="openCalModal(null, 'UC3 / UC4')"
+                                    class="ml-auto inline-flex items-center justify-center w-5 h-5 rounded-full bg-sky-100 text-sky-600 hover:bg-sky-200 transition-colors text-xs font-bold leading-none"
+                                    title="Ajouter une tâche UC3/UC4">+</button>
+                            @endif
                         </div>
                     </div>
                     <div style="width: {{ $totalChartPx }}px; flex-shrink: 0; height: 32px;"></div>
@@ -253,10 +281,26 @@
                      style="opacity: {{ $opacity }}; border-bottom: 1px solid #f1f5f9;">
                     <div style="width: {{ $labelPx }}px; flex-shrink: 0; position: sticky; left: 0; z-index: 15; background: white; border-right: 1px solid #e2e8f0; padding: 0 16px; min-height: 48px; display: flex; flex-direction: column; justify-content: center; transition: background 0.1s;"
                          class="group-hover:bg-slate-50/90">
-                        <span class="block text-[10px] font-semibold text-slate-700 leading-snug"
-                              style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: {{ $labelPx - 32 }}px;"
-                              title="{{ $event->name }}">{{ $event->name }}</span>
-                        <span class="block text-[10px] text-slate-400 mt-0.5 tabular-nums">{{ $dateStr }}</span>
+                        <div class="flex items-center gap-1" style="max-width: {{ $labelPx - 32 }}px;">
+                            <span class="block text-[11px] font-semibold text-slate-700 leading-snug flex-1 min-w-0"
+                                  style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                                  title="{{ $event->name }}">{{ $event->name }}</span>
+                            @if($role === 'instructor')
+                            <span class="cal-row-actions flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                                <button type="button"
+                                        onclick="openCalModal({{ json_encode(['id'=>$event->id,'name'=>$event->name,'section'=>$event->section,'event_type'=>$event->event_type,'start_on'=>$event->start_on?->format('Y-m-d'),'due_on'=>$event->due_on?->format('Y-m-d')]) }})"
+                                        class="p-0.5 rounded text-slate-400 hover:text-sky-600 hover:bg-sky-50 transition-colors" title="Modifier">
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828A2 2 0 0110 16.414H8v-2a2 2 0 01.586-1.414z"/></svg>
+                                </button>
+                                <button type="button"
+                                        onclick="confirmDeleteCal({{ $event->id }}, '{{ addslashes($event->name) }}')"
+                                        class="p-0.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Supprimer">
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                            </span>
+                            @endif
+                        </div>
+                        <span class="block text-[11px] text-slate-400 mt-0.5 tabular-nums">{{ $dateStr }}</span>
                     </div>
                     <div data-chart-track style="width: {{ $totalChartPx }}px; flex-shrink: 0; position: relative; min-height: 48px;"
                          class="group-hover:bg-slate-50/30">
@@ -318,6 +362,82 @@
         </div>{{-- /gantt-inner --}}
     </div>{{-- /gantt-scroll --}}
 </div>{{-- /card --}}
+
+@if($role === 'instructor')
+{{-- ── Calendar event modal (create / edit) ─────────────────────── --}}
+<div id="cal-modal-backdrop"
+     style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.4); z-index:100; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:16px; border:1px solid #e2e8f0; padding:28px; width:440px; max-width:calc(100vw - 32px); box-shadow:0 20px 60px rgba(0,0,0,0.18);">
+        <h2 id="cal-modal-title" class="text-sm font-bold text-slate-800 mb-5">Nouvelle tâche</h2>
+
+        <form id="cal-modal-form" method="POST" action="{{ route('calendar.store') }}">
+            @csrf
+            <input type="hidden" name="_method" id="cal-modal-method" value="POST">
+            <input type="hidden" name="_event_id" id="cal-modal-event-id" value="">
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Nom <span class="text-red-400">*</span></label>
+                    <input type="text" name="name" id="cal-modal-name" required
+                           class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-transparent"
+                           placeholder="Ex: Session formation plongée">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1.5">Section <span class="text-red-400">*</span></label>
+                        <select name="section" id="cal-modal-section" required
+                                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-transparent">
+                            <option value="UC1 / UC2">UC1 / UC2</option>
+                            <option value="UC3 / UC4">UC3 / UC4</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1.5">Type</label>
+                        <select name="event_type" id="cal-modal-type"
+                                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-transparent">
+                            <option value="">Autre</option>
+                            @foreach(array_keys($typeColors) as $t)
+                                @if($t !== '')
+                                <option value="{{ $t }}">{{ $t }}</option>
+                                @endif
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1.5">Début</label>
+                        <input type="date" name="start_on" id="cal-modal-start"
+                               class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1.5">Fin</label>
+                        <input type="date" name="due_on" id="cal-modal-due"
+                               class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-transparent">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
+                <button type="button" onclick="closeCalModal()"
+                        class="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+                    Annuler
+                </button>
+                <button type="submit"
+                        class="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium rounded-lg transition-colors">
+                    Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Hidden delete form --}}
+<form id="cal-delete-form" method="POST" style="display:none">
+    @csrf
+    @method('DELETE')
+</form>
+@endif
 
 <script>
 (function () {
@@ -454,5 +574,58 @@
         });
     }
 })();
+
+@if($role === 'instructor')
+// ── Calendar CRUD modal ──────────────────────────────────────────────────────
+var calStoreUrl  = '{{ route('calendar.store') }}';
+var calDeleteUrl = '{{ route('calendar.destroy', ':id') }}';
+var calUpdateUrl = '{{ route('calendar.update', ':id') }}';
+
+function openCalModal(eventData, defaultSection) {
+    var backdrop = document.getElementById('cal-modal-backdrop');
+    var form     = document.getElementById('cal-modal-form');
+    var title    = document.getElementById('cal-modal-title');
+    var method   = document.getElementById('cal-modal-method');
+    var eventId  = document.getElementById('cal-modal-event-id');
+
+    if (eventData) {
+        title.textContent = 'Modifier la tâche';
+        form.action = calUpdateUrl.replace(':id', eventData.id);
+        method.value = 'PUT';
+        eventId.value = eventData.id;
+        document.getElementById('cal-modal-name').value    = eventData.name    || '';
+        document.getElementById('cal-modal-section').value = eventData.section || 'UC1 / UC2';
+        document.getElementById('cal-modal-type').value    = eventData.event_type || '';
+        document.getElementById('cal-modal-start').value   = eventData.start_on  || '';
+        document.getElementById('cal-modal-due').value     = eventData.due_on    || '';
+    } else {
+        title.textContent = 'Nouvelle tâche';
+        form.action = calStoreUrl;
+        method.value = 'POST';
+        eventId.value = '';
+        form.reset();
+        document.getElementById('cal-modal-section').value = defaultSection || 'UC1 / UC2';
+    }
+
+    backdrop.style.display = 'flex';
+    document.getElementById('cal-modal-name').focus();
+}
+
+function closeCalModal() {
+    document.getElementById('cal-modal-backdrop').style.display = 'none';
+}
+
+function confirmDeleteCal(id, name) {
+    if (!confirm('Supprimer « ' + name + ' » ?')) return;
+    var form = document.getElementById('cal-delete-form');
+    form.action = calDeleteUrl.replace(':id', id);
+    form.submit();
+}
+
+// Close modal on backdrop click
+document.getElementById('cal-modal-backdrop')?.addEventListener('click', function (e) {
+    if (e.target === this) closeCalModal();
+});
+@endif
 </script>
 @endsection

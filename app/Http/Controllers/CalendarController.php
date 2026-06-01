@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CalendarEvent;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 
 class CalendarController extends Controller
@@ -14,7 +15,7 @@ class CalendarController extends Controller
     private const MONTH_NAMES  = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre'];
     private const TOTAL_DAYS   = 304;
     private const DAY_PX       = 10;   // pixels per day
-    private const LABEL_PX     = 220;  // label column width
+    private const LABEL_PX     = 260;  // label column width
 
     public function index()
     {
@@ -96,5 +97,48 @@ class CalendarController extends Controller
     {
         Artisan::call('asana:sync');
         return back()->with('success', 'Calendrier synchronisé avec Asana.');
+    }
+
+    public function store(Request $request)
+    {
+        if (session('role') !== 'instructor') abort(403);
+
+        $data = $request->validate([
+            'name'       => ['required', 'string', 'max:300'],
+            'section'    => ['required', 'in:UC1 / UC2,UC3 / UC4'],
+            'event_type' => ['nullable', 'string', 'max:100'],
+            'start_on'   => ['nullable', 'date'],
+            'due_on'     => ['nullable', 'date', 'after_or_equal:start_on'],
+        ]);
+
+        CalendarEvent::create($data);
+
+        return redirect()->route('calendar.index')->with('success', 'Tâche ajoutée.');
+    }
+
+    public function update(Request $request, CalendarEvent $event)
+    {
+        if (session('role') !== 'instructor') abort(403);
+
+        $data = $request->validate([
+            'name'       => ['required', 'string', 'max:300'],
+            'section'    => ['required', 'in:UC1 / UC2,UC3 / UC4'],
+            'event_type' => ['nullable', 'string', 'max:100'],
+            'start_on'   => ['nullable', 'date'],
+            'due_on'     => ['nullable', 'date', 'after_or_equal:start_on'],
+        ]);
+
+        $event->update($data);
+
+        return redirect()->route('calendar.index')->with('success', 'Tâche mise à jour.');
+    }
+
+    public function destroy(CalendarEvent $event)
+    {
+        if (session('role') !== 'instructor') abort(403);
+
+        $event->delete();
+
+        return redirect()->route('calendar.index')->with('success', 'Tâche supprimée.');
     }
 }
