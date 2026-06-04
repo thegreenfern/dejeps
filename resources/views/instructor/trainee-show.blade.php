@@ -61,6 +61,8 @@
         @foreach([
             'profil'    => 'Profil',
             'epmsp'     => 'EPMSP',
+            'dp'        => 'Dir. plongée',
+            'annexes'   => 'Annexes',
             'uc12'      => 'UC1 / UC2',
             'peda'      => 'Péda',
             'parcours'  => 'Parcours',
@@ -553,7 +555,7 @@
         <div class="bg-white rounded-xl border border-slate-200 p-6">
             <div class="flex items-center justify-between mb-5">
                 <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Calendrier du projet</h2>
-                <a href="{{ route('instructor.uc12') }}"
+                <a href="{{ route('instructor.ressources.index') }}"
                    class="text-xs text-slate-400 hover:text-slate-600 transition-colors">
                     Modifier les dates →
                 </a>
@@ -816,128 +818,375 @@
     {{-- ══════════════════════════════════════════════════════════════════ --}}
     {{-- TAB: EPMSP                                                        --}}
     {{-- ══════════════════════════════════════════════════════════════════ --}}
-    <div id="tab-epmsp" class="tab-panel space-y-5">
+    <div id="tab-epmsp" class="tab-panel space-y-8">
 
-        <div class="flex items-center justify-between mb-1">
+    @php
+        $epmspTypes = [
+            '25m'       => ['title' => 'Sauvetage 25m',      'subtitle' => "Intervention sur un plongeur en difficulté"],
+            'pedagogie' => ['title' => 'Pédagogie Pratique', 'subtitle' => "Conduite de séance d'apprentissage 0/20m"],
+        ];
+    @endphp
+
+    @foreach($epmspTypes as $typeKey => $meta)
+    @php
+        $typeEvals = $trainee->epmsp->where('type', $typeKey)->sortByDesc('evaluated_at');
+        $comps     = \App\Models\TraineeEpmsp::competencies($typeKey);
+        $nbValide  = $typeEvals->where('status', 'valide')->count();
+        $nbEchec   = $typeEvals->where('status', 'echec')->count();
+        $nbTotal   = $typeEvals->count();
+    @endphp
+    <div>
+        {{-- Section header --}}
+        <div class="flex items-center justify-between mb-4">
             <div class="flex items-baseline gap-3">
-                <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">EPMSP</h2>
-                <span class="text-xs text-slate-400">Épreuves de mise en situation professionnelle</span>
+                <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">{{ $meta['title'] }}</h2>
+                <span class="text-xs text-slate-400">{{ $meta['subtitle'] }}</span>
             </div>
-            <span class="inline-flex items-center gap-2 text-sm font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2">
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            <a href="{{ route('instructor.epmsp.create', [$trainee, $typeKey]) }}"
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
                 </svg>
-                12 mai 2026
-            </span>
+                Ajouter
+            </a>
         </div>
 
-        @php
-            $epmspTypes = [
-                '25m'       => ['title' => 'Sauvetage 25m',      'subtitle' => "Intervention sur un plongeur en difficulté"],
-                'pedagogie' => ['title' => 'Pédagogie Pratique', 'subtitle' => "Conduite de séance d'apprentissage 0/20m"],
-            ];
-        @endphp
+        @if($typeEvals->isEmpty())
+            <div class="bg-white rounded-xl border border-slate-200 px-6 py-8 text-center text-sm text-slate-400">
+                Aucune évaluation enregistrée.
+            </div>
+        @else
 
-        @foreach($epmspTypes as $type => $meta)
-            @php
-                $rec           = $trainee->epmsp->firstWhere('type', $type);
-                $competencies  = \App\Models\TraineeEpmsp::competencies($type);
-                $ratings       = $rec?->ratings ?? [];
-                $currentStatus = $rec?->status ?? 'in_progress';
-            @endphp
+        {{-- Summary chips --}}
+        <div class="flex items-center gap-3 mb-3 flex-wrap">
+            <span class="text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-3 py-1">
+                {{ $nbTotal }} évaluation{{ $nbTotal > 1 ? 's' : '' }}
+            </span>
+            @if($nbValide > 0)
+                <span class="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1">
+                    {{ $nbValide }} validée{{ $nbValide > 1 ? 's' : '' }}
+                </span>
+            @endif
+            @if($nbEchec > 0)
+                <span class="text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-full px-3 py-1">
+                    {{ $nbEchec }} échec{{ $nbEchec > 1 ? 's' : '' }}
+                </span>
+            @endif
+        </div>
 
-            <div class="bg-white rounded-xl border border-slate-200 p-5">
+        {{-- Evaluation cards --}}
+        <div class="space-y-3">
+            @foreach($typeEvals as $rec)
+            <div class="bg-white rounded-xl border border-slate-200 p-5 group">
 
-                <div class="flex items-start justify-between mb-4">
-                    <div>
-                        <h2 class="text-sm font-semibold text-slate-700">{{ $meta['title'] }}</h2>
-                        <p class="text-xs text-slate-400 mt-0.5">{{ $meta['subtitle'] }}</p>
-                    </div>
-                    @if($rec && $rec->status !== 'not_started')
-                        <span class="inline-flex items-center text-xs font-semibold border rounded-full px-2.5 py-1 {{ \App\Models\TraineeEpmsp::statusColor($rec->status) }}">
+                {{-- Row: date + status + note + actions --}}
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm font-semibold text-slate-700">
+                            {{ $rec->evaluated_at?->locale('fr')->isoFormat('D MMMM YYYY') ?? '–' }}
+                        </span>
+                        <span class="inline-flex items-center text-xs font-semibold border rounded-full px-2.5 py-0.5 {{ \App\Models\TraineeEpmsp::statusColor($rec->status) }}">
                             {{ \App\Models\TraineeEpmsp::statusLabel($rec->status) }}
                         </span>
-                    @endif
+                        @if($rec->note_globale !== null)
+                            <span class="text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200 rounded-full px-2.5 py-0.5">
+                                Note : {{ number_format($rec->note_globale, 2) }} / 3
+                            </span>
+                        @endif
+                    </div>
+                    <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <a href="{{ route('instructor.epmsp.edit', [$trainee, $rec]) }}"
+                           class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-sky-600 bg-sky-50 border border-sky-200 rounded-lg hover:bg-sky-100 transition-colors">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2.414a2 2 0 01.586-1.414z"/>
+                            </svg>
+                            Modifier
+                        </a>
+                        <form method="POST" action="{{ route('instructor.epmsp.destroy', [$trainee, $rec]) }}"
+                              onsubmit="return confirm('Supprimer cette évaluation ?')">
+                            @csrf @method('DELETE')
+                            <button type="submit"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V4a1 1 0 011-1h6a1 1 0 011 1v3"/>
+                                </svg>
+                                Supprimer
+                            </button>
+                        </form>
+                    </div>
                 </div>
 
-                <form method="POST" action="{{ route('instructor.epmsp.save', [$trainee, $type]) }}" class="space-y-4">
-                    @csrf
-
-                    {{-- Status --}}
-                    <div>
-                        <label class="block text-xs font-medium text-slate-600 mb-1">Statut</label>
-                        <select name="status" class="w-52 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
-                            @foreach(['in_progress' => 'En préparation', 'ready' => "Prêt pour l'évaluation", 'evaluated' => 'Évalué'] as $val => $lbl)
-                                <option value="{{ $val }}" {{ $currentStatus === $val ? 'selected' : '' }}>{{ $lbl }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    {{-- Competency ratings --}}
-                    <div>
-                        <p class="text-xs text-slate-400 mb-3">
-                            <span class="text-amber-500 font-bold">★</span> requis · 1 Insuffisant · 2 Satisfaisant · 3 Maîtrisé
-                        </p>
-                        <div class="space-y-2">
-                            @foreach($competencies as $key => $comp)
-                                @php $rating = (string)($ratings[$key] ?? ''); @endphp
-                                <div class="flex items-center gap-3">
-                                    <div class="flex items-start gap-1 flex-1 min-w-0">
-                                        @if($comp['mandatory'])
-                                            <span class="text-amber-500 text-xs font-bold mt-0.5 flex-shrink-0">★</span>
-                                        @else
-                                            <span class="w-3 flex-shrink-0"></span>
-                                        @endif
-                                        <span class="text-xs text-slate-600 leading-snug">{{ $comp['label'] }}</span>
-                                    </div>
-                                    <div class="flex gap-1 flex-shrink-0">
-                                        <label class="cursor-pointer">
-                                            <input type="radio" name="ratings[{{ $key }}]" value="1" class="sr-only peer" {{ $rating === '1' ? 'checked' : '' }}>
-                                            <div class="w-8 rounded border-2 border-slate-200 py-1 text-center peer-checked:border-red-400 peer-checked:bg-red-50 hover:border-slate-300 transition-colors cursor-pointer">
-                                                <span class="text-xs font-bold text-slate-400 peer-checked:text-red-600">1</span>
-                                            </div>
-                                        </label>
-                                        <label class="cursor-pointer">
-                                            <input type="radio" name="ratings[{{ $key }}]" value="2" class="sr-only peer" {{ $rating === '2' ? 'checked' : '' }}>
-                                            <div class="w-8 rounded border-2 border-slate-200 py-1 text-center peer-checked:border-amber-400 peer-checked:bg-amber-50 hover:border-slate-300 transition-colors cursor-pointer">
-                                                <span class="text-xs font-bold text-slate-400 peer-checked:text-amber-600">2</span>
-                                            </div>
-                                        </label>
-                                        <label class="cursor-pointer">
-                                            <input type="radio" name="ratings[{{ $key }}]" value="3" class="sr-only peer" {{ $rating === '3' ? 'checked' : '' }}>
-                                            <div class="w-8 rounded border-2 border-slate-200 py-1 text-center peer-checked:border-emerald-400 peer-checked:bg-emerald-50 hover:border-slate-300 transition-colors cursor-pointer">
-                                                <span class="text-xs font-bold text-slate-400 peer-checked:text-emerald-600">3</span>
-                                            </div>
-                                        </label>
-                                        <label class="cursor-pointer" title="Effacer">
-                                            <input type="radio" name="ratings[{{ $key }}]" value="" class="sr-only peer" {{ $rating === '' ? 'checked' : '' }}>
-                                            <div class="w-7 rounded border-2 border-slate-200 py-1 text-center peer-checked:border-slate-300 peer-checked:bg-slate-100 hover:border-slate-300 transition-colors cursor-pointer">
-                                                <span class="text-xs text-slate-400">—</span>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-                            @endforeach
+                {{-- Competency ratings --}}
+                <div class="space-y-2">
+                    <p class="text-xs text-slate-400 mb-2">
+                        <span class="text-amber-500 font-bold">★</span> requis · 1 Insuffisant · 2 Satisfaisant · 3 Maîtrisé
+                    </p>
+                    @foreach($comps as $key => $comp)
+                    @php $val = $rec->ratings[$key] ?? null; @endphp
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-start gap-1 flex-1 min-w-0">
+                            <span class="text-amber-500 text-xs font-bold mt-0.5 flex-shrink-0">★</span>
+                            <span class="text-xs text-slate-600 leading-snug">{{ $comp['label'] }}</span>
+                        </div>
+                        <div class="flex-shrink-0">
+                            @if(!$val)
+                                <span class="inline-flex items-center justify-center w-8 h-6 rounded border-2 border-slate-100 text-xs text-slate-300">—</span>
+                            @else
+                                @php
+                                    $valColor = match((int)$val) {
+                                        1 => 'border-red-400 bg-red-50 text-red-600',
+                                        2 => 'border-amber-400 bg-amber-50 text-amber-600',
+                                        3 => 'border-emerald-400 bg-emerald-50 text-emerald-600',
+                                        default => 'border-slate-200 bg-white text-slate-400',
+                                    };
+                                @endphp
+                                <span class="inline-flex items-center justify-center w-8 h-6 rounded border-2 text-xs font-bold {{ $valColor }}">{{ $val }}</span>
+                            @endif
                         </div>
                     </div>
+                    @endforeach
+                </div>
 
-                    {{-- Notes --}}
-                    <div>
-                        <label class="block text-xs font-medium text-slate-600 mb-1">Notes formateur</label>
-                        <textarea name="instructor_notes" rows="3"
-                                  placeholder="Observations sur la préparation ou les résultats…"
-                                  class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none">{{ $rec?->instructor_notes }}</textarea>
+                @if($rec->instructor_notes)
+                    <div class="mt-4 pt-3 border-t border-slate-100">
+                        <p class="text-xs text-slate-500 italic">{{ $rec->instructor_notes }}</p>
                     </div>
+                @endif
 
-                    <div class="flex justify-end">
-                        <button type="submit"
-                                class="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold rounded-lg transition-colors">
-                            Enregistrer
-                        </button>
-                    </div>
-                </form>
             </div>
-        @endforeach
+            @endforeach
+        </div>
+        @endif
+    </div>
+    @endforeach
+
+    </div>
+
+    {{-- ══════════════════════════════════════════════════════════════════ --}}
+    {{-- TAB: Direction de plongée                                         --}}
+    {{-- ══════════════════════════════════════════════════════════════════ --}}
+    <div id="tab-dp" class="tab-panel">
+
+        {{-- Header --}}
+        <div class="flex items-center justify-between mb-5">
+            <div class="flex items-baseline gap-3">
+                <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Direction de plongée</h2>
+                <span class="text-xs text-slate-400">Évaluations pratiques en milieu naturel</span>
+            </div>
+            <a href="{{ route('instructor.dp.create', $trainee) }}"
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                </svg>
+                Ajouter
+            </a>
+        </div>
+
+        @if($dpEvaluations->isEmpty())
+            <div class="bg-white rounded-xl border border-slate-200 px-6 py-10 text-center text-sm text-slate-400">
+                Aucune évaluation enregistrée.
+            </div>
+        @else
+
+        {{-- Summary chips --}}
+        @php
+            $dpValide = $dpEvaluations->where('status', 'valide')->count();
+            $dpEchec  = $dpEvaluations->where('status', 'echec')->count();
+            $dpTotal  = $dpEvaluations->count();
+        @endphp
+        <div class="flex items-center gap-3 mb-4 flex-wrap">
+            <span class="text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-3 py-1">
+                {{ $dpTotal }} évaluation{{ $dpTotal > 1 ? 's' : '' }}
+            </span>
+            @if($dpValide > 0)
+                <span class="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1">
+                    {{ $dpValide }} validée{{ $dpValide > 1 ? 's' : '' }}
+                </span>
+            @endif
+            @if($dpEchec > 0)
+                <span class="text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-full px-3 py-1">
+                    {{ $dpEchec }} échec{{ $dpEchec > 1 ? 's' : '' }}
+                </span>
+            @endif
+        </div>
+
+        {{-- Evaluation list --}}
+        <div class="space-y-3">
+            @foreach($dpEvaluations as $dp)
+            @php
+                $comps = \App\Models\DirectionPlongeeEvaluation::competencies();
+            @endphp
+            <div class="bg-white rounded-xl border border-slate-200 p-5 group">
+
+                {{-- Row: date + status + note + actions --}}
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm font-semibold text-slate-700">
+                            {{ $dp->evaluated_at->locale('fr')->isoFormat('D MMMM YYYY') }}
+                        </span>
+                        <span class="inline-flex items-center text-xs font-semibold border rounded-full px-2.5 py-0.5 {{ \App\Models\DirectionPlongeeEvaluation::statusColor($dp->status) }}">
+                            {{ \App\Models\DirectionPlongeeEvaluation::statusLabel($dp->status) }}
+                        </span>
+                        @if($dp->note_globale !== null)
+                            <span class="text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200 rounded-full px-2.5 py-0.5">
+                                Note : {{ number_format($dp->note_globale, 2) }} / 3
+                            </span>
+                        @endif
+                    </div>
+                    <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <a href="{{ route('instructor.dp.edit', [$trainee, $dp]) }}"
+                           class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-sky-600 bg-sky-50 border border-sky-200 rounded-lg hover:bg-sky-100 transition-colors">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2.414a2 2 0 01.586-1.414z"/>
+                            </svg>
+                            Modifier
+                        </a>
+                        <form method="POST" action="{{ route('instructor.dp.destroy', [$trainee, $dp]) }}"
+                              onsubmit="return confirm('Supprimer cette évaluation ?')">
+                            @csrf @method('DELETE')
+                            <button type="submit"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V4a1 1 0 011-1h6a1 1 0 011 1v3"/>
+                                </svg>
+                                Supprimer
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                {{-- Competency ratings --}}
+                <div class="space-y-2">
+                    <p class="text-xs text-slate-400 mb-2">
+                        <span class="text-amber-500 font-bold">★</span> requis · 1 Insuffisant · 2 Satisfaisant · 3 Maîtrisé
+                    </p>
+                    @foreach($comps as $key => $comp)
+                    @php $val = $dp->$key; @endphp
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-start gap-1 flex-1 min-w-0">
+                            <span class="text-amber-500 text-xs font-bold mt-0.5 flex-shrink-0">★</span>
+                            <span class="text-xs text-slate-600 leading-snug">{{ $comp['label'] }}</span>
+                        </div>
+                        <div class="flex-shrink-0">
+                            @if($val === null)
+                                <span class="inline-flex items-center justify-center w-8 h-6 rounded border-2 border-slate-100 text-xs text-slate-300">—</span>
+                            @else
+                                @php
+                                    $valColor = match($val) {
+                                        1 => 'border-red-400 bg-red-50 text-red-600',
+                                        2 => 'border-amber-400 bg-amber-50 text-amber-600',
+                                        3 => 'border-emerald-400 bg-emerald-50 text-emerald-600',
+                                        default => 'border-slate-200 bg-white text-slate-400',
+                                    };
+                                @endphp
+                                <span class="inline-flex items-center justify-center w-8 h-6 rounded border-2 text-xs font-bold {{ $valColor }}">{{ $val }}</span>
+                            @endif
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+
+                @if($dp->instructor_notes)
+                    <div class="mt-4 pt-3 border-t border-slate-100">
+                        <p class="text-xs text-slate-500 italic">{{ $dp->instructor_notes }}</p>
+                    </div>
+                @endif
+
+
+            </div>
+            @endforeach
+        </div>
+        @endif
+
+    </div>
+
+    {{-- ══════════════════════════════════════════════════════════════════ --}}
+    {{-- TAB: Compétences annexes                                          --}}
+    {{-- ══════════════════════════════════════════════════════════════════ --}}
+    <div id="tab-annexes" class="tab-panel">
+    @php
+        $comps      = \App\Models\CompetencesAnnexes::competencies();
+        $status     = $competencesRec->globalStatus();
+        $acquired   = $competencesRec->acquiredCount();
+        $total      = count($comps);
+        $pct        = $total > 0 ? round($acquired / $total * 100) : 0;
+    @endphp
+
+        {{-- Summary --}}
+        <div class="flex items-center gap-4 mb-6">
+            <span class="inline-flex items-center text-xs font-semibold border rounded-full px-3 py-1 {{ \App\Models\CompetencesAnnexes::statusColor($status) }}">
+                {{ \App\Models\CompetencesAnnexes::statusLabel($status) }}
+            </span>
+            <div class="flex-1 flex items-center gap-3">
+                <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all
+                                {{ $acquired === $total ? 'bg-emerald-400' : 'bg-sky-400' }}"
+                         style="width: {{ $pct }}%"></div>
+                </div>
+                <span class="text-xs font-semibold text-slate-500 flex-shrink-0">{{ $acquired }}/{{ $total }} acquises</span>
+            </div>
+        </div>
+
+        {{-- Form --}}
+        <form method="POST" action="{{ route('instructor.comp-annexes.save', $trainee) }}" class="space-y-4">
+            @csrf
+
+            <div class="bg-white rounded-xl border border-slate-200 p-5">
+                <p class="text-xs text-slate-400 mb-4">1 Non acquis · 2 En cours d'acquisition · 3 Acquis · — Non évalué</p>
+
+                <div class="space-y-3">
+                    @foreach($comps as $key => $comp)
+                    @php $cur = (string)($competencesRec->$key ?? ''); @endphp
+                    <div class="flex items-center gap-3">
+                        <div class="flex-1 min-w-0">
+                            <span class="text-sm font-medium text-slate-700">{{ $comp['label'] }}</span>
+                            <span class="text-xs text-slate-400 ml-2">{{ $comp['description'] }}</span>
+                        </div>
+                        <div class="flex gap-1 flex-shrink-0">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="{{ $key }}" value="1" class="sr-only peer" {{ $cur === '1' ? 'checked' : '' }}>
+                                <div class="w-8 rounded border-2 border-slate-200 py-1 text-center peer-checked:border-red-400 peer-checked:bg-red-50 hover:border-slate-300 transition-colors cursor-pointer">
+                                    <span class="text-xs font-bold text-slate-400 peer-checked:text-red-600">1</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="{{ $key }}" value="2" class="sr-only peer" {{ $cur === '2' ? 'checked' : '' }}>
+                                <div class="w-8 rounded border-2 border-slate-200 py-1 text-center peer-checked:border-amber-400 peer-checked:bg-amber-50 hover:border-slate-300 transition-colors cursor-pointer">
+                                    <span class="text-xs font-bold text-slate-400 peer-checked:text-amber-600">2</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="{{ $key }}" value="3" class="sr-only peer" {{ $cur === '3' ? 'checked' : '' }}>
+                                <div class="w-8 rounded border-2 border-slate-200 py-1 text-center peer-checked:border-emerald-400 peer-checked:bg-emerald-50 hover:border-slate-300 transition-colors cursor-pointer">
+                                    <span class="text-xs font-bold text-slate-400 peer-checked:text-emerald-600">3</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer" title="Non évalué">
+                                <input type="radio" name="{{ $key }}" value="" class="sr-only peer" {{ $cur === '' ? 'checked' : '' }}>
+                                <div class="w-7 rounded border-2 border-slate-200 py-1 text-center peer-checked:border-slate-300 peer-checked:bg-slate-100 hover:border-slate-300 transition-colors cursor-pointer">
+                                    <span class="text-xs text-slate-400">—</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-slate-200 p-5">
+                <label class="block text-xs font-medium text-slate-600 mb-1">Notes formateur</label>
+                <textarea name="notes_formateur" rows="3"
+                          placeholder="Observations sur la progression…"
+                          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none">{{ $competencesRec->notes_formateur }}</textarea>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit"
+                        class="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold rounded-lg transition-colors">
+                    Enregistrer
+                </button>
+            </div>
+        </form>
 
     </div>
 

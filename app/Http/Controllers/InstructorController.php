@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\AppNotification;
 use App\Models\CalendarEvent;
 use App\Models\Competency;
+use App\Models\CompetencesAnnexes;
+use App\Models\DirectionPlongeeEvaluation;
 use App\Models\InitialAssessment;
 use App\Models\ProgramSettings;
 use App\Models\Trainee;
@@ -31,7 +33,7 @@ class InstructorController extends Controller
 
     public function show(Trainee $trainee)
     {
-        $trainee->load(['profile', 'ucProgress', 'epmsp', 'uc3']);
+        $trainee->load(['profile', 'ucProgress', 'epmsp', 'uc3', 'directionPlongee']);
 
         $assessments = InitialAssessment::with('competency')
             ->where('trainee_id', $trainee->id)
@@ -65,10 +67,14 @@ class InstructorController extends Controller
             ->latest()
             ->get();
 
+        $dpEvaluations   = $trainee->directionPlongee->sortByDesc('evaluated_at');
+        $competencesRec  = CompetencesAnnexes::firstOrCreate(['trainee_id' => $trainee->id]);
+
         return view('instructor.trainee-show', compact(
             'trainee', 'assessments', 'settings',
             'trackedMilestones', 'milestoneProgress', 'pendingReviewRequest',
-            'pedaData', 'pedaTheoData', 'feedbacks', 'timeline'
+            'pedaData', 'pedaTheoData', 'feedbacks', 'timeline',
+            'dpEvaluations', 'competencesRec'
         ));
     }
 
@@ -112,30 +118,6 @@ class InstructorController extends Controller
         ProgramSettings::instance()->update($data);
 
         return back()->with('success', 'Informations mises à jour.');
-    }
-
-    public function saveEpmsp(Request $request, Trainee $trainee, string $type)
-    {
-        abort_unless(in_array($type, ['25m', 'pedagogie']), 404);
-
-        $data = $request->validate([
-            'status'           => ['required', 'in:not_started,in_progress,ready,evaluated'],
-            'ratings'          => ['nullable', 'array'],
-            'ratings.*'        => ['nullable', 'in:1,2,3'],
-            'instructor_notes' => ['nullable', 'string', 'max:2000'],
-        ]);
-
-        $data['ratings'] = array_filter($data['ratings'] ?? [], fn($v) => $v !== null && $v !== '');
-        if (empty($data['ratings'])) {
-            $data['ratings'] = null;
-        }
-
-        TraineeEpmsp::updateOrCreate(
-            ['trainee_id' => $trainee->id, 'type' => $type],
-            $data
-        );
-
-        return back()->with('success', 'EPMSP mis à jour.');
     }
 
     public function addSession(Trainee $trainee)

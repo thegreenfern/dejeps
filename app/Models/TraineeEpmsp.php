@@ -9,11 +9,12 @@ class TraineeEpmsp extends Model
     protected $table = 'trainee_epmsp';
 
     protected $fillable = [
-        'trainee_id', 'type', 'status', 'certification', 'ratings', 'instructor_notes',
+        'trainee_id', 'type', 'evaluated_at', 'status', 'ratings', 'note_globale', 'instructor_notes',
     ];
 
     protected $casts = [
-        'ratings' => 'array',
+        'ratings'      => 'array',
+        'evaluated_at' => 'date',
     ];
 
     public static function competencies(string $type): array
@@ -37,25 +38,37 @@ class TraineeEpmsp extends Model
         ];
     }
 
+    public function computeNoteGlobale(): ?float
+    {
+        $comps = self::competencies($this->type);
+        $total = 0;
+        $count = 0;
+        foreach ($comps as $key => $comp) {
+            $val = $this->ratings[$key] ?? null;
+            if ($val === null || $val === '') continue;
+            $total += (int) $val;
+            $count++;
+        }
+        return $count > 0 ? round($total / $count, 2) : null;
+    }
+
     public static function statusLabel(string $status): string
     {
         return match($status) {
-            'not_started' => 'Non commencé',
-            'in_progress' => 'En préparation',
-            'ready'       => 'Prêt pour l\'évaluation',
-            'evaluated'   => 'Évalué',
-            default       => $status,
+            'en_cours' => 'En cours',
+            'valide'   => 'Validé',
+            'echec'    => 'Échec',
+            default    => $status,
         };
     }
 
     public static function statusColor(string $status): string
     {
         return match($status) {
-            'not_started' => 'bg-slate-100 text-slate-500 border-slate-200',
-            'in_progress' => 'bg-amber-50 text-amber-700 border-amber-200',
-            'ready'       => 'bg-sky-50 text-sky-700 border-sky-200',
-            'evaluated'   => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-            default       => 'bg-slate-100 text-slate-500 border-slate-200',
+            'en_cours' => 'bg-amber-50 text-amber-700 border-amber-200',
+            'valide'   => 'bg-emerald-50 text-emerald-700 border-emerald-200',
+            'echec'    => 'bg-red-50 text-red-700 border-red-200',
+            default    => 'bg-slate-100 text-slate-500 border-slate-200',
         };
     }
 }

@@ -19,6 +19,20 @@
                     Suivi DEJEPS
                 </a>
                 <div class="flex items-center gap-5">
+                    {{-- Intranet & Aide — both roles --}}
+                    @if(session('role') === 'instructor')
+                        @php $intranetUrl = route('instructor.ressources.index'); $intranetActive = request()->routeIs('instructor.ressources.*'); @endphp
+                    @else
+                        @php $intranetUrl = route('trainee.ressources'); $intranetActive = request()->routeIs('trainee.ressources'); @endphp
+                    @endif
+                    <a href="{{ $intranetUrl }}"
+                       class="inline-flex items-center gap-1.5 text-xs font-medium transition-colors
+                              {{ $intranetActive ? 'text-violet-600' : 'text-slate-400 hover:text-slate-600' }}">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253M3 12c0 .778.099 1.533.284 2.253"/>
+                        </svg>
+                        Intranet
+                    </a>
                     {{-- Instructor-only links --}}
                     @if(session('role') === 'instructor')
                     <a href="{{ route('instructor.progression-config') }}"
@@ -29,6 +43,7 @@
                         </svg>
                         Progression
                     </a>
+                    @endif
                     <a href="{{ route('instructor.aide') }}"
                        class="inline-flex items-center gap-1.5 text-xs font-medium transition-colors
                               {{ request()->routeIs('instructor.aide') ? 'text-violet-600' : 'text-slate-400 hover:text-slate-600' }}">
@@ -37,7 +52,6 @@
                         </svg>
                         Aide
                     </a>
-                    @endif
                     {{-- Calendar link --}}
                     <a href="{{ route('calendar.index') }}"
                        class="inline-flex items-center gap-1.5 text-xs font-medium transition-colors
@@ -86,6 +100,5 @@
 
         @yield('content')
     </main>
-
 </body>
 </html>

@@ -2,11 +2,15 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\CompetencesAnnexesController;
+use App\Http\Controllers\DirectionPlongeeController;
+use App\Http\Controllers\EpmspController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InstructorController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\RessourcesController;
 use App\Http\Controllers\TraineeController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -38,7 +42,6 @@ Route::prefix('formateur')->name('instructor.')->group(function () {
     Route::get('/stagiaire/{trainee}/seance/ajouter',    [InstructorController::class, 'addSession'])->name('session.add');
     Route::get('/stagiaire/{trainee}/seance/{slug}/modifier',    [InstructorController::class, 'editSession'])->name('session.edit');
     Route::delete('/stagiaire/{trainee}/seance/{slug}',          [InstructorController::class, 'deleteSession'])->name('session.delete');
-    Route::get('/uc12',                         [InstructorController::class, 'uc12'])->name('uc12');
     Route::post('/uc12/settings',               [InstructorController::class, 'saveUc12Settings'])->name('uc12.settings.save');
     Route::post('/uc12/documents',              [InstructorController::class, 'uploadDocument'])->name('uc12.document.upload');
     Route::delete('/uc12/documents/{document}', [InstructorController::class, 'deleteDocument'])->name('uc12.document.delete');
@@ -47,7 +50,11 @@ Route::prefix('formateur')->name('instructor.')->group(function () {
     Route::post('/uc3/{trainee}',                 [InstructorController::class, 'saveUc3'])->name('uc3.save');
     Route::post('/uc3/{trainee}/seance',          [InstructorController::class, 'saveUc3Seance'])->name('uc3.seance.save');
     Route::post('/uc3/{trainee}/theo-sit',        [InstructorController::class, 'saveTheoSitOverride'])->name('uc3.theo.sit.save');
-    Route::post('/epmsp/{trainee}/{type}',        [InstructorController::class, 'saveEpmsp'])->name('epmsp.save');
+    Route::get('/stagiaire/{trainee}/epmsp/{type}/ajouter', [EpmspController::class, 'create'])->name('epmsp.create')->where('type', '25m|pedagogie');
+    Route::post('/stagiaire/{trainee}/epmsp',               [EpmspController::class, 'store'])->name('epmsp.store');
+    Route::get('/stagiaire/{trainee}/epmsp/{epmsp}/modifier',[EpmspController::class, 'edit'])->name('epmsp.edit');
+    Route::put('/stagiaire/{trainee}/epmsp/{epmsp}',         [EpmspController::class, 'update'])->name('epmsp.update');
+    Route::delete('/stagiaire/{trainee}/epmsp/{epmsp}',      [EpmspController::class, 'destroy'])->name('epmsp.destroy');
     Route::get('/stagiaire/{trainee}/positionnement',         [InstructorController::class, 'positioning'])->name('positioning');
     Route::post('/stagiaire/{trainee}/positionnement',        [InstructorController::class, 'savePositioning'])->name('positioning.save');
     Route::get('/stagiaire/{trainee}/positionnement/rapport', [InstructorController::class, 'positioningReport'])->name('positioning-report');
@@ -59,6 +66,23 @@ Route::prefix('formateur')->name('instructor.')->group(function () {
     Route::get('/config/progression',               [InstructorController::class, 'progressionConfig'])->name('progression-config');
     Route::post('/config/progression',              [InstructorController::class, 'saveProgressionConfig'])->name('progression-config.save');
     Route::post('/config/progression/{trainee}',    [InstructorController::class, 'saveTraineeThresholds'])->name('progression-config.trainee.save');
+
+    Route::post('/stagiaire/{trainee}/comp-annexes', [CompetencesAnnexesController::class, 'save'])->name('comp-annexes.save');
+
+    Route::get('/stagiaire/{trainee}/dp/ajouter',           [DirectionPlongeeController::class, 'create'])->name('dp.create');
+    Route::post('/stagiaire/{trainee}/dp',                  [DirectionPlongeeController::class, 'store'])->name('dp.store');
+    Route::get('/stagiaire/{trainee}/dp/{dp}/modifier',     [DirectionPlongeeController::class, 'edit'])->name('dp.edit');
+    Route::put('/stagiaire/{trainee}/dp/{dp}',              [DirectionPlongeeController::class, 'update'])->name('dp.update');
+    Route::delete('/stagiaire/{trainee}/dp/{dp}',           [DirectionPlongeeController::class, 'destroy'])->name('dp.destroy');
+
+    Route::get('/ressources',                               [RessourcesController::class, 'index'])->name('ressources.index');
+    Route::post('/ressources',                              [RessourcesController::class, 'store'])->name('ressources.store');
+    Route::delete('/ressources/{ressource}',                [RessourcesController::class, 'destroy'])->name('ressources.destroy');
+    Route::post('/ressources/reorder',                      [RessourcesController::class, 'reorder'])->name('ressources.reorder');
+    Route::get('/ressources/{ressource}/download',          [RessourcesController::class, 'download'])->name('ressources.download');
+    Route::post('/ressources/sites',                        [RessourcesController::class, 'storeSite'])->name('ressources.sites.store');
+    Route::put('/ressources/sites/{site}',                  [RessourcesController::class, 'updateSite'])->name('ressources.sites.update');
+    Route::delete('/ressources/sites/{site}',               [RessourcesController::class, 'destroySite'])->name('ressources.sites.destroy');
 });
 
 // Trainee routes
@@ -76,4 +100,7 @@ Route::prefix('stagiaire')->name('trainee.')->group(function () {
     Route::delete('/seances/{slug}',                [TraineeController::class, 'deleteSeance'])->name('seances.delete');
     Route::get('/pedagogie',                        [TraineeController::class, 'peda'])->name('peda');
     Route::get('/parcours',                         [TraineeController::class, 'parcours'])->name('parcours');
+    Route::get('/direction-plongee',                [TraineeController::class, 'directionPlongee'])->name('dp');
+    Route::get('/competences-annexes',              [TraineeController::class, 'competencesAnnexes'])->name('comp-annexes');
+    Route::get('/ressources',                       [RessourcesController::class, 'indexTrainee'])->name('ressources');
 });

@@ -37,6 +37,16 @@ class Trainee extends Model
         return $this->hasOne(TraineeUc3::class);
     }
 
+    public function directionPlongee(): HasMany
+    {
+        return $this->hasMany(DirectionPlongeeEvaluation::class);
+    }
+
+    public function competencesAnnexes(): HasOne
+    {
+        return $this->hasOne(CompetencesAnnexes::class);
+    }
+
     public function pedaStatuses(): HasMany
     {
         return $this->hasMany(TraineePedaStatus::class);

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\AppNotification;
 use App\Models\CalendarEvent;
+use App\Models\CompetencesAnnexes;
+use App\Models\DirectionPlongeeEvaluation;
 use App\Models\ProgramSettings;
 use App\Models\Trainee;
 use App\Models\Uc12Document;
@@ -606,6 +608,24 @@ class TraineeController extends Controller
             ->all();
 
         return ['events' => $events, 'ongoing' => $ongoing];
+    }
+
+    public function competencesAnnexes()
+    {
+        $trainee = $this->requireTrainee();
+        $rec     = CompetencesAnnexes::firstOrCreate(['trainee_id' => $trainee->id]);
+
+        return view('trainee.competences-annexes', compact('trainee', 'rec'));
+    }
+
+    public function directionPlongee()
+    {
+        $trainee = $this->requireTrainee();
+        $evals   = DirectionPlongeeEvaluation::where('trainee_id', $trainee->id)
+                       ->orderByDesc('evaluated_at')
+                       ->get();
+
+        return view('trainee.direction-plongee', compact('trainee', 'evals'));
     }
 
     private function requireTrainee(): Trainee

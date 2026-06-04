@@ -22,29 +22,13 @@
                 <p class="text-sm text-slate-400">Formation DEJEPS Plongée</p>
             </div>
         </div>
-        <div class="flex items-center gap-2">
-            <a href="{{ route('trainee.parcours') }}"
-               class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors">
-                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                </svg>
-                Parcours
-            </a>
-            <a href="{{ route('trainee.peda') }}"
-               class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors">
-                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                </svg>
-                Pédagogie
-            </a>
-            <a href="{{ route('trainee.profile.edit') }}"
-               class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors">
-                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/>
-                </svg>
-                Mon profil
-            </a>
-        </div>
+        <a href="{{ route('trainee.profile.edit') }}"
+           class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/>
+            </svg>
+            Mon profil
+        </a>
     </div>
 
     {{-- Tab navigation --}}
@@ -58,6 +42,31 @@
                 {{ $label }}
             </button>
         @endforeach
+        <a href="{{ route('trainee.dp') }}"
+           class="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors text-center
+                  text-slate-500 hover:text-slate-700 hover:bg-white/60">
+            Dir. plongée
+        </a>
+        <a href="{{ route('trainee.comp-annexes') }}"
+           class="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors text-center
+                  text-slate-500 hover:text-slate-700 hover:bg-white/60">
+            Annexes
+        </a>
+        <a href="{{ route('trainee.peda') }}"
+           class="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors text-center
+                  text-slate-500 hover:text-slate-700 hover:bg-white/60">
+            Pédagogie
+        </a>
+        <a href="{{ route('trainee.parcours') }}"
+           class="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors text-center
+                  text-slate-500 hover:text-slate-700 hover:bg-white/60">
+            Parcours
+        </a>
+        <a href="{{ route('trainee.ressources') }}"
+           class="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors text-center
+                  text-slate-500 hover:text-slate-700 hover:bg-white/60">
+            Ressources
+        </a>
     </div>
 
     {{-- ══════════════════════════════════════════════════════════════════ --}}
@@ -291,63 +300,103 @@
     {{-- ══════════════════════════════════════════════════════════════════ --}}
     {{-- TAB: EPMSP                                                        --}}
     {{-- ══════════════════════════════════════════════════════════════════ --}}
-    <div id="tab-epmsp" class="tab-panel space-y-4">
-
-        @if($settings->epmsp_date)
-        <p class="text-xs text-slate-400 mb-4">Évaluations · <span class="font-medium text-slate-500">{{ $settings->epmsp_date->locale('fr')->isoFormat('D MMMM YYYY') }}</span></p>
-        @endif
+    <div id="tab-epmsp" class="tab-panel space-y-8">
 
         @php
             $epmspTypes = [
-                '25m'       => ['Sauvetage 25m',      "Intervention sur un plongeur en difficulté"],
-                'pedagogie' => ['Pédagogie Pratique', "Conduite de séance d'apprentissage 0/20m"],
-            ];
-            $ratingLabels = ['1' => 'Insuffisant', '2' => 'Satisfaisant', '3' => 'Maîtrisé'];
-            $ratingColors = [
-                '1' => 'bg-red-50 text-red-600 border-red-200',
-                '2' => 'bg-amber-50 text-amber-600 border-amber-200',
-                '3' => 'bg-emerald-50 text-emerald-600 border-emerald-200',
+                '25m'       => ['title' => 'Sauvetage 25m',      'subtitle' => "Intervention sur un plongeur en difficulté"],
+                'pedagogie' => ['title' => 'Pédagogie Pratique', 'subtitle' => "Conduite de séance d'apprentissage 0/20m"],
             ];
         @endphp
 
-        @foreach($epmspTypes as $type => [$title, $subtitle])
-            @php
-                $rec    = $epmspData->firstWhere('type', $type);
-                $status = $rec?->status ?? 'not_started';
-            @endphp
-            <div class="bg-white rounded-xl border border-slate-200 p-6">
-                <div class="flex items-start justify-between mb-4">
-                    <div>
-                        <h2 class="text-sm font-semibold text-slate-700">{{ $title }}</h2>
-                        <p class="text-xs text-slate-400 mt-0.5">{{ $subtitle }}</p>
-                    </div>
-                    <span class="inline-flex items-center text-xs font-semibold border rounded-full px-2.5 py-1 {{ \App\Models\TraineeEpmsp::statusColor($status) }}">
-                        {{ \App\Models\TraineeEpmsp::statusLabel($status) }}
-                    </span>
-                </div>
+        @foreach($epmspTypes as $typeKey => $meta)
+        @php
+            $typeEvals = $epmspData->where('type', $typeKey)->sortByDesc('evaluated_at');
+            $comps     = \App\Models\TraineeEpmsp::competencies($typeKey);
+            $nbValide  = $typeEvals->where('status', 'valide')->count();
+            $nbEchec   = $typeEvals->where('status', 'echec')->count();
+            $nbTotal   = $typeEvals->count();
+        @endphp
+        <div>
+            <div class="flex items-baseline gap-3 mb-4">
+                <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">{{ $meta['title'] }}</h2>
+                <span class="text-xs text-slate-400">{{ $meta['subtitle'] }}</span>
+            </div>
 
-                @if($rec?->ratings && count(array_filter($rec->ratings)))
-                    @php $competencies = \App\Models\TraineeEpmsp::competencies($type); @endphp
-                    <div class="space-y-2">
-                        @foreach($competencies as $key => $comp)
-                            @php $rating = $rec->ratings[$key] ?? null; @endphp
-                            @if($rating)
-                                <div class="flex items-center gap-2">
-                                    @if($comp['mandatory'])
-                                        <span class="text-amber-500 text-xs font-bold flex-shrink-0">★</span>
-                                    @else
-                                        <span class="w-3.5 flex-shrink-0"></span>
-                                    @endif
-                                    <span class="text-xs text-slate-600 flex-1 leading-snug">{{ $comp['label'] }}</span>
-                                    <span class="text-xs font-bold border rounded px-1.5 py-0.5 flex-shrink-0 {{ $ratingColors[$rating] ?? '' }}">{{ $rating }} · {{ $ratingLabels[$rating] ?? $rating }}</span>
-                                </div>
-                            @endif
-                        @endforeach
-                    </div>
-                @else
-                    <p class="text-xs text-slate-400">Les résultats seront affichés après l'évaluation.</p>
+            @if($typeEvals->isEmpty())
+                <div class="bg-white rounded-xl border border-slate-200 px-6 py-8 text-center text-sm text-slate-400">
+                    Les résultats seront affichés après l'évaluation.
+                </div>
+            @else
+
+            <div class="flex items-center gap-3 mb-3 flex-wrap">
+                <span class="text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-3 py-1">
+                    {{ $nbTotal }} évaluation{{ $nbTotal > 1 ? 's' : '' }}
+                </span>
+                @if($nbValide > 0)
+                    <span class="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1">
+                        {{ $nbValide }} validée{{ $nbValide > 1 ? 's' : '' }}
+                    </span>
+                @endif
+                @if($nbEchec > 0)
+                    <span class="text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-full px-3 py-1">
+                        {{ $nbEchec }} échec{{ $nbEchec > 1 ? 's' : '' }}
+                    </span>
                 @endif
             </div>
+
+            <div class="space-y-3">
+                @foreach($typeEvals as $rec)
+                <div class="bg-white rounded-xl border border-slate-200 p-5">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="text-sm font-semibold text-slate-700">
+                            {{ $rec->evaluated_at?->locale('fr')->isoFormat('D MMMM YYYY') ?? '–' }}
+                        </span>
+                        <span class="inline-flex items-center text-xs font-semibold border rounded-full px-2.5 py-0.5 {{ \App\Models\TraineeEpmsp::statusColor($rec->status) }}">
+                            {{ \App\Models\TraineeEpmsp::statusLabel($rec->status) }}
+                        </span>
+                        @if($rec->note_globale !== null)
+                            <span class="text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200 rounded-full px-2.5 py-0.5">
+                                Note : {{ number_format($rec->note_globale, 2) }} / 3
+                            </span>
+                        @endif
+                    </div>
+                    <div class="space-y-2">
+                        @foreach($comps as $key => $comp)
+                        @php $val = $rec->ratings[$key] ?? null; @endphp
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-start gap-1 flex-1 min-w-0">
+                                <span class="text-amber-500 text-xs font-bold mt-0.5 flex-shrink-0">★</span>
+                                <span class="text-xs text-slate-600 leading-snug">{{ $comp['label'] }}</span>
+                            </div>
+                            <div class="flex-shrink-0">
+                                @if(!$val)
+                                    <span class="inline-flex items-center justify-center w-8 h-6 rounded border-2 border-slate-100 text-xs text-slate-300">—</span>
+                                @else
+                                    @php
+                                        $valColor = match((int)$val) {
+                                            1 => 'border-red-400 bg-red-50 text-red-600',
+                                            2 => 'border-amber-400 bg-amber-50 text-amber-600',
+                                            3 => 'border-emerald-400 bg-emerald-50 text-emerald-600',
+                                            default => 'border-slate-200 bg-white text-slate-400',
+                                        };
+                                    @endphp
+                                    <span class="inline-flex items-center justify-center w-8 h-6 rounded border-2 text-xs font-bold {{ $valColor }}">{{ $val }}</span>
+                                @endif
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    @if($rec->instructor_notes)
+                        <div class="mt-4 pt-3 border-t border-slate-100">
+                            <p class="text-xs text-slate-500 italic">{{ $rec->instructor_notes }}</p>
+                        </div>
+                    @endif
+                </div>
+                @endforeach
+            </div>
+            @endif
+        </div>
         @endforeach
 
     </div>
